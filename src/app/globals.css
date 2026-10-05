@@ -115,7 +115,9 @@ p {
 .hero {
   position: relative;
   isolation: isolate;
-  min-height: min(1042px, 100svh);
+  height: clamp(70svh, 72.36vw, 1042px);
+  aspect-ratio: auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -877,7 +879,7 @@ p {
 
 @media (max-width: 980px) {
   .hero {
-    min-height: 100svh;
+    height: 60vw;
   }
 
   .hero-content {
@@ -957,6 +959,10 @@ p {
 }
 
 @media (max-width: 640px) {
+  .hero {
+    height: 50vw;
+  }
+
   .site-header {
     padding-right: 24px;
   }
