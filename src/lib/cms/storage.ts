@@ -41,7 +41,7 @@ const LOCAL_PAGES = "mindstreet-cms-pages";
 const LOCAL_ARCHIVE = "mindstreet-cms-page-archive";
 const LOCAL_TEMPLATES = "mindstreet-cms-templates";
 const LOCAL_TEMPLATE_ARCHIVE = "mindstreet-cms-template-archive";
-const SEED_VERSION = "expertomraden-v1";
+export const SEED_VERSION = "expertomraden-v1";
 const RESERVED = new Set(["admin"]);
 const SEGMENT = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 

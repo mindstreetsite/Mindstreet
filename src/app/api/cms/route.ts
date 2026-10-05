@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/cms/admin-session";
 import { readCmsState, writeCmsState } from "@/lib/cms/blob-store";
-import { hydrateState } from "@/lib/cms/storage";
+import { hydrateState, SEED_VERSION } from "@/lib/cms/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +42,10 @@ export async function PUT(request: Request) {
   }
 
   const payload = body as { state?: unknown };
-  const state = hydrateState(payload.state);
+  const incoming = payload.state;
+  const state = hydrateState(
+    incoming && typeof incoming === "object" ? { ...incoming, seedVersion: SEED_VERSION } : incoming,
+  );
 
   try {
     const nextEtag = await writeCmsState(state);
