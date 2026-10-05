@@ -2732,6 +2732,32 @@ function ExpertiseCards({
   );
 }
 
+function PageChoice({
+  value,
+  pages,
+  pageHrefs,
+  onChange,
+}: {
+  value: string;
+  pages: CmsPage[];
+  pageHrefs: Set<string>;
+  onChange: (href: string) => void;
+}) {
+  return (
+    <AdminField label="Länk">
+      <select value={value} onChange={(event) => onChange(event.target.value)}>
+        <option value="">Välj sida</option>
+        {value && !pageHrefs.has(value) ? <option value={value}>{value}</option> : null}
+        {pages.map((page) => (
+          <option key={page.slug} value={`/${page.slug}`}>
+            {page.parentSlug ? `– ${pageTitle(page)}` : pageTitle(page)}
+          </option>
+        ))}
+      </select>
+    </AdminField>
+  );
+}
+
 function MenuRows({
   items,
   pages,
@@ -2768,19 +2794,64 @@ function MenuRows({
                 onChange={(event) => patch(index, { label: event.target.value })}
               />
             </AdminField>
-            <AdminField label="Länk">
-              <select value={item.href} onChange={(event) => patch(index, { href: event.target.value })}>
-                <option value="">Välj sida</option>
-                {item.href && !pageHrefs.has(item.href) ? (
-                  <option value={item.href}>{item.href}</option>
-                ) : null}
-                {pages.map((page) => (
-                  <option key={page.slug} value={`/${page.slug}`}>
-                    {page.parentSlug ? `– ${pageTitle(page)}` : pageTitle(page)}
-                  </option>
+            <PageChoice
+              value={item.href}
+              pages={pages}
+              pageHrefs={pageHrefs}
+              onChange={(href) => patch(index, { href })}
+            />
+            <fieldset className="admin-cards admin-submenu">
+              <legend>Undermeny</legend>
+              <ol>
+                {(item.children ?? []).map((child, childIndex) => (
+                  <li key={childIndex}>
+                    <div className="admin-block-head">
+                      <strong>Underrad {childIndex + 1}</strong>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          patch(index, {
+                            children: (item.children ?? []).filter((_, row) => row !== childIndex),
+                          })
+                        }
+                      >
+                        Ta bort
+                      </button>
+                    </div>
+                    <AdminField label="Text">
+                      <input
+                        value={child.label}
+                        onChange={(event) =>
+                          patch(index, {
+                            children: (item.children ?? []).map((row, rowIndex) =>
+                              rowIndex === childIndex ? { ...row, label: event.target.value } : row,
+                            ),
+                          })
+                        }
+                      />
+                    </AdminField>
+                    <PageChoice
+                      value={child.href}
+                      pages={pages}
+                      pageHrefs={pageHrefs}
+                      onChange={(href) =>
+                        patch(index, {
+                          children: (item.children ?? []).map((row, rowIndex) =>
+                            rowIndex === childIndex ? { ...row, href } : row,
+                          ),
+                        })
+                      }
+                    />
+                  </li>
                 ))}
-              </select>
-            </AdminField>
+              </ol>
+              <button
+                type="button"
+                onClick={() => patch(index, { children: [...(item.children ?? []), { label: "", href: "" }] })}
+              >
+                Lägg till underrad
+              </button>
+            </fieldset>
           </li>
         ))}
       </ol>

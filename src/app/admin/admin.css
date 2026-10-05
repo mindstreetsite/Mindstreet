@@ -1667,6 +1667,10 @@
   margin-top: 8px;
 }
 
+.admin-submenu {
+  margin-left: 16px;
+}
+
 .admin-thumb-highlight::before {
   content: "";
   position: absolute;

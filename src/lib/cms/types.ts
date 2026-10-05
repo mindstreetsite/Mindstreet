@@ -86,6 +86,7 @@ export type CmsBlock = {
 export type CmsLink = {
   label: string;
   href: string;
+  children?: { label: string; href: string }[];
 };
 
 export type CmsPage = {
