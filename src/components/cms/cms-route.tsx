@@ -41,5 +41,11 @@ export async function CmsRoute({ slug }: { slug: string }) {
   const page = getPublishedPage(slug, stored.state.pages);
   if (!page) return <MissingPage />;
 
-  return <PageBlocks page={page} publishedAt={newsDateForSlug(page.slug, stored.state.pages)} />;
+  return (
+    <PageBlocks
+      page={page}
+      menu={stored.state.menu}
+      publishedAt={newsDateForSlug(page.slug, stored.state.pages)}
+    />
+  );
 }

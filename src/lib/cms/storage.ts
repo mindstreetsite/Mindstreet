@@ -50,6 +50,7 @@ export type CmsState = {
   archive: PageArchiveEntry[];
   templates: CmsTemplate[];
   templateArchive: TemplateArchiveEntry[];
+  menu?: CmsLink[];
 };
 
 export function seedState(): CmsState {
@@ -132,7 +133,7 @@ export function withoutImage(state: CmsState, url: string): { state: CmsState; c
     templates.some((template, index) => template !== state.templates[index]) ||
     templateArchive.some((entry, index) => entry !== state.templateArchive[index]);
   return {
-    state: changed ? { pages, archive, templates, templateArchive } : state,
+    state: changed ? { pages, archive, templates, templateArchive, menu: state.menu } : state,
     changed,
   };
 }
@@ -155,17 +156,21 @@ export function hydrateState(value: unknown): CmsState {
         .filter((entry): entry is TemplateArchiveEntry => entry !== null)
     : [];
 
-  if (raw.seedVersion === SEED_VERSION) {
-    return { pages, archive, templates, templateArchive };
-  }
+  const nextPages =
+    raw.seedVersion === SEED_VERSION
+      ? pages
+      : (() => {
+          const existing = new Set(pages.map((page) => page.slug));
+          const missing = seedPages.filter((page) => !existing.has(page.slug));
+          return missing.length ? [...missing, ...pages] : pages;
+        })();
 
-  const existing = new Set(pages.map((page) => page.slug));
-  const missing = seedPages.filter((page) => !existing.has(page.slug));
   return {
-    pages: missing.length ? [...missing, ...pages] : pages,
+    pages: nextPages,
     archive,
     templates,
     templateArchive,
+    menu: hydrateMenu(raw.menu, nextPages),
   };
 }
 
@@ -515,4 +520,18 @@ function isCmsLink(value: unknown): value is CmsLink {
   if (!value || typeof value !== "object") return false;
   const link = value as CmsLink;
   return typeof link.label === "string" && typeof link.href === "string";
+}
+
+function savedMenu(pages: CmsPage[]): CmsLink[] | undefined {
+  for (const page of orderedPages(pages)) {
+    const block = page.blocks[0];
+    if (!block || (block.type !== "hero" && block.type !== "pageHeader")) continue;
+    if ((block.menu ?? []).some((item) => item.label.trim())) return block.menu;
+  }
+  return undefined;
+}
+
+function hydrateMenu(value: unknown, pages: CmsPage[]): CmsLink[] | undefined {
+  if (Array.isArray(value)) return value.filter(isCmsLink);
+  return savedMenu(pages);
 }

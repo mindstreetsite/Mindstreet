@@ -148,6 +148,7 @@ export default function AdminPage() {
   const [archive, setArchive] = useState<PageArchiveEntry[]>([]);
   const [templates, setTemplates] = useState<CmsTemplate[]>([]);
   const [templateArchive, setTemplateArchive] = useState<TemplateArchiveEntry[]>([]);
+  const [menu, setMenu] = useState<CmsLink[]>([]);
   const [deleteSlug, setDeleteSlug] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<"page" | "template" | null>(null);
   const [deleteInput, setDeleteInput] = useState("");
@@ -162,6 +163,7 @@ export default function AdminPage() {
   const archiveRef = useRef(archive);
   const templatesRef = useRef(templates);
   const templateArchiveRef = useRef(templateArchive);
+  const menuRef = useRef(menu);
   const etagRef = useRef<string | null>(null);
   const saveChain = useRef(Promise.resolve<string | null>(null));
   const saveTimer = useRef<number | null>(null);
@@ -170,6 +172,7 @@ export default function AdminPage() {
   archiveRef.current = archive;
   templatesRef.current = templates;
   templateArchiveRef.current = templateArchive;
+  menuRef.current = menu;
 
   function snapshot(): CmsState {
     return {
@@ -177,6 +180,7 @@ export default function AdminPage() {
       archive: archiveRef.current,
       templates: templatesRef.current,
       templateArchive: templateArchiveRef.current,
+      menu: menuRef.current,
     };
   }
 
@@ -195,11 +199,13 @@ export default function AdminPage() {
     archiveRef.current = state.archive;
     templatesRef.current = state.templates;
     templateArchiveRef.current = state.templateArchive;
+    menuRef.current = state.menu ?? [];
     etagRef.current = etag;
     setPages(state.pages);
     setArchive(state.archive);
     setTemplates(state.templates);
     setTemplateArchive(state.templateArchive);
+    setMenu(state.menu ?? []);
     setSelectedSlug((current) => current ?? orderedPages(state.pages)[0]?.slug ?? null);
   }
 
@@ -240,6 +246,7 @@ export default function AdminPage() {
           ...state.templateArchive,
           ...local.templateArchive.filter((entry) => !templateArchiveIds.has(entry.id)),
         ],
+        menu: state.menu ?? local.menu,
       };
       const changed =
         data.empty ||
@@ -387,6 +394,12 @@ export default function AdminPage() {
     else setNotice(null);
     for (const waiter of waiters) waiter(error);
     return error;
+  }
+
+  function updateMenu(next: CmsLink[]) {
+    menuRef.current = next;
+    setMenu(next);
+    void scheduleSave();
   }
 
   function persist(updater: (current: CmsPage[]) => CmsPage[]) {
@@ -1093,9 +1106,9 @@ export default function AdminPage() {
                                 ) : null}
                                 {index === 0 && (block.type === "pageHeader" || block.type === "hero") ? (
                                   <MenuRows
-                                    items={block.menu ?? []}
+                                    items={menu}
                                     pages={orderedPages(pages)}
-                                    onChange={(menu) => updateBlock(block.id, { menu })}
+                                    onChange={updateMenu}
                                   />
                                 ) : null}
                               </li>
@@ -1129,6 +1142,7 @@ export default function AdminPage() {
                   <PageMiniature
                     url={`${SITE_HOST}/${selected.slug}`}
                     page={selected}
+                    menu={menu}
                     publishedAt={newsDateForSlug(selected.slug, pages)}
                   />
                 ) : null}
@@ -1342,9 +1356,9 @@ export default function AdminPage() {
                                   ) : null}
                                   {index === 0 && (block.type === "pageHeader" || block.type === "hero") ? (
                                     <MenuRows
-                                      items={block.menu ?? []}
+                                      items={menu}
                                       pages={orderedPages(pages)}
-                                      onChange={(menu) => updateDraftBlock(block.id, { menu })}
+                                      onChange={updateMenu}
                                     />
                                   ) : null}
                                 </li>
@@ -1363,6 +1377,7 @@ export default function AdminPage() {
 
                   <PageMiniature
                     url={previewSlug ? `${SITE_HOST}/${previewSlug}` : SITE_HOST}
+                    menu={menu}
                     publishedAt={newsDateForSlug(previewSlug, pages)}
                     page={{
                       slug: previewSlug || "ny-sida",
@@ -1558,6 +1573,7 @@ export default function AdminPage() {
 
                 <PageMiniature
                   url={templateDraftUrl}
+                  menu={menu}
                   publishedAt={newsDateForSlug(
                     blankMode ? blankSlug : (componentPage?.slug ?? ""),
                     pages,
@@ -2226,12 +2242,14 @@ function DeletePageDialog({
 
 function PageMiniature({
   page,
+  menu,
   url,
   summary,
   children,
   publishedAt = "",
 }: {
   page?: CmsPage;
+  menu?: CmsLink[];
   url: string;
   summary?: string;
   children?: ReactNode;
@@ -2294,7 +2312,7 @@ function PageMiniature({
             aria-hidden="true"
             style={{ width: PREVIEW_WIDTH, zoom: scale }}
           >
-            {children ?? (page ? <PageBlocks page={page} preview publishedAt={publishedAt} /> : null)}
+            {children ?? (page ? <PageBlocks page={page} menu={menu} preview publishedAt={publishedAt} /> : null)}
           </div>
           {showHint ? (
             <p className="admin-miniature-hint">

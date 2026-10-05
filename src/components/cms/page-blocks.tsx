@@ -5,16 +5,18 @@ import { SiteFooter } from "@/components/site-footer";
 import { renderInline } from "@/lib/cms/inline";
 import { articleParagraphs, quoteAfterIndex, resolveTheme } from "@/lib/cms/library";
 import { formatNewsDate } from "@/lib/cms/news-date";
-import type { CmsBlock, CmsPage } from "@/lib/cms/types";
+import type { CmsBlock, CmsLink, CmsPage } from "@/lib/cms/types";
 import type { ReactNode } from "react";
 import "./page-blocks.css";
 
 export function PageBlocks({
   page,
+  menu,
   preview = false,
   publishedAt = "",
 }: {
   page: CmsPage;
+  menu?: CmsLink[];
   preview?: boolean;
   publishedAt?: string;
 }) {
@@ -35,6 +37,7 @@ export function PageBlocks({
         <BlockView
           key={block.id}
           block={block}
+          menu={menu}
           withHeader={firstIsHero && index === 0}
           preview={preview}
           parentHref={parentHref}
@@ -64,19 +67,21 @@ function articleBackHref(parentSlug: string | undefined, pageParentHref: string)
 
 function BlockView({
   block,
+  menu,
   withHeader,
   preview,
   parentHref,
   publishedAt,
 }: {
   block: CmsBlock;
+  menu?: CmsLink[];
   withHeader: boolean;
   preview: boolean;
   parentHref: string;
   publishedAt: string;
 }) {
   if (block.type === "pageHeader") {
-    return <Header variant="bar" items={block.menu} />;
+    return <Header variant="bar" items={menu} />;
   }
 
   if (block.type === "hero") {
@@ -88,7 +93,7 @@ function BlockView({
           <div className="hero-photo cms-hero-fallback" />
         )}
         <div className="hero-shade" />
-        {withHeader ? <Header items={block.menu} /> : null}
+        {withHeader ? <Header items={menu} /> : null}
         <div className="hero-content">
           <div>
             <h1>{block.heading}</h1>
