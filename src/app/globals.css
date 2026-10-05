@@ -304,6 +304,10 @@ p {
   margin: 8px 0 12px 28px;
 }
 
+.menu-panel ul ul li + li {
+  margin-top: 12px;
+}
+
 .menu-panel ul ul a {
   margin: 8px 0;
   color: #002b3d;
