@@ -50,9 +50,8 @@ import {
   prependArticleNews,
   setArticleNewsPublished,
   quoteAfterIndex,
-  leadThemes,
   resolveTheme,
-  themes,
+  swatchesFor,
   usesExpandedTheme,
 } from "@/lib/cms/library";
 import {
@@ -1862,7 +1861,7 @@ function BlockFieldsEditor({
       {fields.theme ? (
         <ColorSwatch
           value={resolveTheme(block)}
-          options={usesExpandedTheme(block.type) ? leadThemes : themes}
+          options={swatchesFor(block.type, resolveTheme(block))}
           onChange={(theme) => onChange({ theme })}
         />
       ) : null}
@@ -3250,11 +3249,11 @@ function BlockCatalog({ onAdd }: { onAdd: (type: BlockType) => void }) {
 function ColorSwatch({
   value,
   onChange,
-  options = themes,
+  options,
 }: {
   value: BlockTheme;
   onChange: (theme: BlockTheme) => void;
-  options?: typeof themes;
+  options: { id: BlockTheme; label: string; color: string }[];
 }) {
   return (
     <fieldset className="admin-swatches">

@@ -1,5 +1,7 @@
 import type { BlockTheme, BlockType, CmsBlock, CmsCard, CmsPage } from "@/lib/cms/types";
 
+export { swatchesFor, themesFor, surfaceById, type Surface } from "@/lib/design/palette";
+
 export const SITE_HOST = "www.mindstreet.se";
 
 const loremBody =
@@ -26,39 +28,6 @@ export type BlockFields = {
   theme: boolean;
   quote: boolean;
 };
-
-export const themes: {
-  id: BlockTheme;
-  label: string;
-  color: string;
-}[] = [
-  { id: "sand", label: "Sand", color: "rgba(205, 183, 151, 0.5)" },
-  { id: "mist", label: "Dimma", color: "#e9edef" },
-  { id: "cream", label: "Grädde", color: "#ede1da" },
-  { id: "white", label: "Vit", color: "#fff" },
-];
-
-export const leadThemes: {
-  id: BlockTheme;
-  label: string;
-  color: string;
-}[] = [
-  { id: "sand", label: "rgba(205, 183, 151, 0.5)", color: "rgba(205, 183, 151, 0.5)" },
-  { id: "mist", label: "#E9EDEF", color: "#E9EDEF" },
-  { id: "slate", label: "#54809E", color: "#54809E" },
-  { id: "coralTint", label: "rgba(227, 124, 100, 0.4)", color: "rgba(227, 124, 100, 0.4)" },
-  { id: "coral", label: "#E37C64", color: "#E37C64" },
-  { id: "sage", label: "#719F8D", color: "#719F8D" },
-  { id: "linen", label: "#E6DBCB", color: "#E6DBCB" },
-  { id: "ink", label: "#0A2A3A", color: "#0A2A3A" },
-  { id: "steel", label: "#5E7F9A", color: "#5E7F9A" },
-  { id: "fog", label: "#E8E7E7", color: "#E8E7E7" },
-  { id: "charcoal", label: "#3A3A45", color: "#3A3A45" },
-  { id: "rust", label: "#955035", color: "#955035" },
-  { id: "ice", label: "#C4DBE5", color: "#C4DBE5" },
-  { id: "blush", label: "rgba(225, 188, 171, 0.4)", color: "rgba(225, 188, 171, 0.4)" },
-  { id: "white", label: "#FFFFFF", color: "#FFFFFF" },
-];
 
 export const library: {
   type: BlockType;

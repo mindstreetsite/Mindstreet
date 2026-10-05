@@ -2,7 +2,7 @@
   max-width: calc(834px + 2 * var(--gutter));
   margin: 0 auto;
   padding: 72px var(--gutter) 88px;
-  color: #000;
+  color: var(--text);
   font-family: var(--font-lato), "Lato", sans-serif;
   font-style: normal;
   font-size: 20px;
@@ -16,7 +16,7 @@
 
 .cms-text-column h2 {
   margin: 0 0 18px;
-  color: #000;
+  color: var(--text);
   font-family: inherit;
   font-size: 30px;
   font-style: normal;
@@ -26,7 +26,7 @@
 
 .cms-text-column p {
   margin: 0 0 28px;
-  color: #000;
+  color: var(--text);
   font-family: inherit;
   font-size: 20px;
   font-style: normal;
@@ -62,7 +62,7 @@
 }
 
 .cms-photo-fallback {
-  background: rgba(0, 43, 61, 0.18);
+  background: color-mix(in srgb, var(--navy) 18%, transparent);
 }
 
 .cms-topbar {
@@ -101,94 +101,110 @@
 .cms-media {
   position: relative;
   overflow: hidden;
-  color: var(--navy);
+  color: var(--on-light);
 }
 
 .cms-theme-sand {
-  background: rgba(205, 183, 151, 0.5);
+  background: var(--sand);
+  color: var(--on-light);
 }
 
 .cms-theme-mist {
-  background: #e9edef;
+  background: var(--mist);
+  color: var(--on-light);
 }
 
 .cms-theme-cream {
-  background: #ede1da;
+  background: var(--cream);
+  color: var(--on-light);
 }
 
 .cms-theme-white {
-  background: #fff;
+  background: var(--white);
+  color: var(--on-light);
 }
 
 .cms-theme-slate {
-  background: #54809e;
+  background: var(--slate);
+  color: var(--on-dark);
 }
 
 .cms-theme-coralTint {
-  background: rgba(227, 124, 100, 0.4);
+  background: var(--coral-tint);
+  color: var(--on-light);
 }
 
 .cms-theme-coral {
-  background: #e37c64;
+  background: var(--coral);
+  color: var(--on-light);
 }
 
 .cms-theme-sage {
-  background: #719f8d;
+  background: var(--sage);
+  color: var(--on-dark);
 }
 
 .cms-theme-linen {
-  background: #e6dbcb;
+  background: var(--linen);
+  color: var(--on-light);
 }
 
 .cms-theme-ink {
-  background: #0a2a3a;
+  background: var(--navy);
+  color: var(--on-dark);
 }
 
 .cms-theme-steel {
-  background: #5e7f9a;
+  background: var(--steel);
+  color: var(--on-dark);
 }
 
 .cms-theme-fog {
-  background: #e8e7e7;
+  background: var(--fog);
+  color: var(--on-light);
 }
 
 .cms-theme-charcoal {
-  background: #3a3a45;
+  background: var(--charcoal);
+  color: var(--on-dark);
 }
 
 .cms-theme-rust {
-  background: #955035;
+  background: var(--rust);
+  color: var(--on-dark);
 }
 
 .cms-theme-ice {
-  background: #c4dbe5;
+  background: var(--ice);
+  color: var(--on-light);
 }
 
 .cms-theme-blush {
-  background: rgba(225, 188, 171, 0.4);
+  background: var(--blush);
+  color: var(--on-light);
 }
 
-.about.cms-theme-sand { background: rgba(205, 183, 151, 0.5); }
-.about.cms-theme-mist { background: #e9edef; }
-.about.cms-theme-cream { background: #ede1da; }
-.about.cms-theme-white { background: #fff; }
-.about.cms-theme-slate { background: #54809e; }
-.about.cms-theme-coralTint { background: rgba(227, 124, 100, 0.4); }
-.about.cms-theme-coral { background: #e37c64; }
-.about.cms-theme-sage { background: #719f8d; }
-.about.cms-theme-linen { background: #e6dbcb; }
-.about.cms-theme-ink { background: #0a2a3a; }
-.about.cms-theme-steel { background: #5e7f9a; }
-.about.cms-theme-fog { background: #e8e7e7; }
-.about.cms-theme-charcoal { background: #3a3a45; }
-.about.cms-theme-rust { background: #955035; }
-.about.cms-theme-ice { background: #c4dbe5; }
-.about.cms-theme-blush { background: rgba(225, 188, 171, 0.4); }
+.about.cms-theme-sand { background: var(--sand); }
+.about.cms-theme-mist { background: var(--mist); }
+.about.cms-theme-cream { background: var(--cream); }
+.about.cms-theme-white { background: var(--white); }
+.about.cms-theme-slate { background: var(--slate); }
+.about.cms-theme-coralTint { background: var(--coral-tint); }
+.about.cms-theme-coral { background: var(--coral); }
+.about.cms-theme-sage { background: var(--sage); }
+.about.cms-theme-linen { background: var(--linen); }
+.about.cms-theme-ink { background: var(--navy); }
+.about.cms-theme-steel { background: var(--steel); }
+.about.cms-theme-fog { background: var(--fog); }
+.about.cms-theme-charcoal { background: var(--charcoal); }
+.about.cms-theme-rust { background: var(--rust); }
+.about.cms-theme-ice { background: var(--ice); }
+.about.cms-theme-blush { background: var(--blush); }
 
 .cms-surface {
   position: relative;
   overflow: hidden;
-  color: var(--navy);
+  color: var(--on-light);
 }
 
 .cms-surface.cms-theme-slate,
@@ -196,39 +212,45 @@
 .cms-surface.cms-theme-steel,
 .cms-surface.cms-theme-charcoal,
 .cms-surface.cms-theme-rust,
+.cms-surface.cms-theme-sage,
 .cms-media.cms-theme-slate,
 .cms-media.cms-theme-ink,
 .cms-media.cms-theme-steel,
 .cms-media.cms-theme-charcoal,
 .cms-media.cms-theme-rust,
+.cms-media.cms-theme-sage,
 .about.cms-theme-slate,
 .about.cms-theme-ink,
 .about.cms-theme-steel,
 .about.cms-theme-charcoal,
 .about.cms-theme-rust,
+.about.cms-theme-sage,
 .cms-statement.cms-theme-slate,
 .cms-statement.cms-theme-ink,
 .cms-statement.cms-theme-steel,
 .cms-statement.cms-theme-charcoal,
-.cms-statement.cms-theme-rust {
-  color: #fff;
+.cms-statement.cms-theme-rust,
+.cms-statement.cms-theme-sage {
+  color: var(--on-dark);
 }
 
 .cms-media.cms-theme-slate .btn-dark,
 .cms-media.cms-theme-ink .btn-dark,
 .cms-media.cms-theme-steel .btn-dark,
 .cms-media.cms-theme-charcoal .btn-dark,
-.cms-media.cms-theme-rust .btn-dark {
-  color: #fff;
-  border-color: #fff;
+.cms-media.cms-theme-rust .btn-dark,
+.cms-media.cms-theme-sage .btn-dark {
+  color: var(--on-dark);
+  border-color: var(--on-dark);
 }
 
 .cms-media.cms-theme-slate .btn-dark:hover,
 .cms-media.cms-theme-ink .btn-dark:hover,
 .cms-media.cms-theme-steel .btn-dark:hover,
 .cms-media.cms-theme-charcoal .btn-dark:hover,
-.cms-media.cms-theme-rust .btn-dark:hover {
-  background: #fff;
+.cms-media.cms-theme-rust .btn-dark:hover,
+.cms-media.cms-theme-sage .btn-dark:hover {
+  background: var(--on-dark);
   color: var(--navy);
 }
 
@@ -380,7 +402,7 @@
 }
 
 .cms-contact-card-grid .cms-contact-icon {
-  color: #7a94a8;
+  color: var(--steel);
 }
 
 .cms-contact-icon.is-phone {
@@ -435,7 +457,7 @@
 
 .cms-divider-inner h2 {
   padding-bottom: 16px;
-  border-bottom: 1px solid rgba(0, 43, 61, 0.28);
+  border-bottom: 1px solid color-mix(in srgb, var(--navy) 28%, transparent);
   font-size: clamp(32px, 3.1vw, 45px);
   font-weight: 400;
   line-height: 1.2;
@@ -478,7 +500,7 @@
   flex-direction: column;
   overflow: hidden;
   padding: 96px var(--gutter);
-  color: #21134d;
+  color: var(--navy);
 }
 
 .cms-statement.is-left {
@@ -520,9 +542,9 @@
   min-width: 0;
   height: 44px;
   padding: 0 26px;
-  border: 1px solid #21134d;
+  border: 1px solid var(--navy);
   border-radius: 37px;
-  color: #21134d;
+  color: var(--navy);
   background: transparent;
   font-size: 15px;
   font-weight: 400;
@@ -531,26 +553,28 @@
 
 .cms-statement .cms-statement-link:hover,
 .cms-contact-cards .cms-statement-link:hover {
-  background: #21134d;
-  color: #fff;
+  background: var(--navy);
+  color: var(--on-dark);
 }
 
 .cms-statement.cms-theme-slate .cms-statement-link,
 .cms-statement.cms-theme-ink .cms-statement-link,
 .cms-statement.cms-theme-steel .cms-statement-link,
 .cms-statement.cms-theme-charcoal .cms-statement-link,
-.cms-statement.cms-theme-rust .cms-statement-link {
-  color: #fff;
-  border-color: #fff;
+.cms-statement.cms-theme-rust .cms-statement-link,
+.cms-statement.cms-theme-sage .cms-statement-link {
+  color: var(--on-dark);
+  border-color: var(--on-dark);
 }
 
 .cms-statement.cms-theme-slate .cms-statement-link:hover,
 .cms-statement.cms-theme-ink .cms-statement-link:hover,
 .cms-statement.cms-theme-steel .cms-statement-link:hover,
 .cms-statement.cms-theme-charcoal .cms-statement-link:hover,
-.cms-statement.cms-theme-rust .cms-statement-link:hover {
-  background: #fff;
-  color: #21134d;
+.cms-statement.cms-theme-rust .cms-statement-link:hover,
+.cms-statement.cms-theme-sage .cms-statement-link:hover {
+  background: var(--on-dark);
+  color: var(--navy);
 }
 
 .cms-article-back {
@@ -732,7 +756,7 @@
 
 .cms-page-links a:hover {
   background: var(--navy);
-  color: #fff;
+  color: var(--on-dark);
 }
 
 .cms-expertise {
