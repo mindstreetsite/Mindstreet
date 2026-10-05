@@ -307,15 +307,15 @@ export default function AdminPage() {
   const templateOptions = templateChoices(pages, templates, hiddenTemplateSlugs(templateArchive));
   const templatePage = templateOptions.find((page) => page.slug === templateSlug) ?? null;
   const pendingDelete =
-    deleteTarget === "page" && deleteSlug
+    deleteTarget === "page" && deleteSlug !== null
       ? (pages.find((page) => page.slug === deleteSlug) ?? null)
       : null;
   const pendingTemplateDelete =
-    deleteTarget === "template" && deleteSlug
+    deleteTarget === "template" && deleteSlug !== null
       ? (templateOptions.find((page) => page.slug === deleteSlug) ?? null)
       : null;
-  const pendingRemoved = deleteSlug ? pagesRemovedWith(deleteSlug, pages) : [];
-  const parents = rootPages(pages);
+  const pendingRemoved = deleteSlug !== null ? pagesRemovedWith(deleteSlug, pages) : [];
+  const parents = rootPages(pages).filter((page) => page.slug);
   const previewSlug = composeSlug(parentSlug || undefined, slugifyTitle(titleInput));
   const createIssues = templatePage
     ? pageCompletenessIssues(
@@ -328,7 +328,7 @@ export default function AdminPage() {
           blocks: draftBlocks,
         },
         pages,
-        { requireTitle: true },
+        { requireTitle: Boolean(titleInput.trim() || parentSlug) },
       )
     : [];
   const blankMode = componentTarget === BLANK_TEMPLATE;
@@ -441,7 +441,8 @@ export default function AdminPage() {
   async function createPage(event: FormEvent) {
     event.preventDefault();
     const title = titleInput.trim();
-    if (!title) {
+    const parent = parentSlug || undefined;
+    if (!title && parent) {
       setNotice("Skriv ett sidnamn.");
       return;
     }
@@ -451,8 +452,7 @@ export default function AdminPage() {
       return;
     }
 
-    const parent = parentSlug || undefined;
-    const segment = slugifyTitle(title);
+    const segment = title ? slugifyTitle(title) : "";
     const slug = composeSlug(parent, segment);
     const current = pagesRef.current;
     const slugError = validateSlug(slug, current);
@@ -537,8 +537,8 @@ export default function AdminPage() {
   }
 
   async function confirmDelete() {
-    if (!deleteSlug) return;
-    const address = `${SITE_HOST}/${deleteSlug}`;
+    if (deleteSlug === null) return;
+    const address = pageAddress(deleteSlug);
     if (!addressMatches(deleteInput, address)) return;
     const result = deletePagesToArchive(
       deleteSlug,
@@ -565,8 +565,8 @@ export default function AdminPage() {
   }
 
   async function confirmDeleteTemplate() {
-    if (!deleteSlug) return;
-    const address = `${SITE_HOST}/${deleteSlug}`;
+    if (deleteSlug === null) return;
+    const address = pageAddress(deleteSlug);
     if (!addressMatches(deleteInput, address)) return;
     const result = deleteTemplateChoice(
       deleteSlug,
@@ -955,7 +955,7 @@ export default function AdminPage() {
                 <section aria-label="Befintliga sidor">
                   <ul className="admin-page-list">
                     {listedPages.map((page) => (
-                      <li key={page.slug} className={page.parentSlug ? "is-child" : undefined}>
+                      <li key={page.slug || "/"} className={page.parentSlug ? "is-child" : undefined}>
                         <button
                           type="button"
                           className={page.slug === selectedSlug ? "is-selected" : undefined}
@@ -976,7 +976,7 @@ export default function AdminPage() {
                             </span>
                           </span>
                           <small>
-                            {SITE_HOST}/{page.slug}
+                            {pageAddress(page.slug)}
                           </small>
                         </button>
                       </li>
@@ -991,7 +991,7 @@ export default function AdminPage() {
                         <p className="admin-kicker">Sida</p>
                         <h2 className="admin-title">{pageTitle(selected)}</h2>
                         <p className="admin-preview">
-                          {SITE_HOST}/{selected.slug}
+                          {pageAddress(selected.slug)}
                         </p>
                       </div>
                       <div className="admin-main-actions">
@@ -1059,7 +1059,7 @@ export default function AdminPage() {
                                   issues={selectedIssues}
                                   onChange={(patch) => updateBlock(block.id, patch)}
                                   onImage={(src, field) => updateBlock(block.id, { [field]: src })}
-                                  parents={rootPages(pages).filter((page) => page.slug !== selected.slug)}
+                                  parents={rootPages(pages).filter((page) => page.slug && page.slug !== selected.slug)}
                                   pages={pages}
                                   pageParentSlug={selected.parentSlug ?? ""}
                                 />
@@ -1140,7 +1140,7 @@ export default function AdminPage() {
 
                 {selected ? (
                   <PageMiniature
-                    url={`${SITE_HOST}/${selected.slug}`}
+                    url={pageAddress(selected.slug)}
                     page={selected}
                     menu={menu}
                     publishedAt={newsDateForSlug(selected.slug, pages)}
@@ -1177,7 +1177,7 @@ export default function AdminPage() {
                             Välj mall
                           </option>
                           {templateOptions.map((page) => (
-                            <option key={page.slug} value={page.slug}>
+                            <option key={page.slug || "/"} value={page.slug}>
                               {page.parentSlug ? `– ${pageTitle(page)}` : pageTitle(page)}
                             </option>
                           ))}
@@ -1228,7 +1228,7 @@ export default function AdminPage() {
                             <p className="admin-kicker">Ny sida</p>
                             <h2 className="admin-title">{titleInput.trim() || "Ny sida"}</h2>
                             <p className="admin-preview">
-                              {previewSlug ? `${SITE_HOST}/${previewSlug}` : `${SITE_HOST}/`}
+                              {pageAddress(previewSlug)}
                             </p>
                           </div>
                           <div className="admin-main-actions">
@@ -1244,10 +1244,10 @@ export default function AdminPage() {
                               <button type="submit" className="admin-primary">
                                 Spara sida
                               </button>
-                              {lastSavedSlug ? (
+                              {lastSavedSlug !== null ? (
                                 <a
                                   className="admin-quiet"
-                                  href={`/${lastSavedSlug}`}
+                                  href={lastSavedSlug ? `/${lastSavedSlug}` : "/"}
                                   target="_blank"
                                   rel="noreferrer"
                                 >
@@ -1276,7 +1276,7 @@ export default function AdminPage() {
                           </AdminField>
                           <p className="admin-derived-url">
                             <span>URL</span>
-                            {previewSlug ? `${SITE_HOST}/${previewSlug}` : `${SITE_HOST}/`}
+                            {pageAddress(previewSlug)}
                           </p>
                           <label htmlFor="page-parent">
                             Förälder
@@ -1287,7 +1287,7 @@ export default function AdminPage() {
                             >
                               <option value="">Ingen</option>
                               {parents.map((page) => (
-                                <option key={page.slug} value={page.slug}>
+                                <option key={page.slug || "/"} value={page.slug}>
                                   {pageTitle(page)}
                                 </option>
                               ))}
@@ -1528,7 +1528,7 @@ export default function AdminPage() {
                     >
                       <option value={BLANK_TEMPLATE}>Blank sida</option>
                       {listedPages.map((page) => (
-                        <option key={page.slug} value={page.slug}>
+                        <option key={page.slug || "/"} value={page.slug}>
                           {page.parentSlug ? `– ${pageTitle(page)}` : pageTitle(page)}
                         </option>
                       ))}
@@ -1559,7 +1559,7 @@ export default function AdminPage() {
                         >
                           <option value="">Ingen</option>
                           {parents.map((page) => (
-                            <option key={page.slug} value={page.slug}>
+                            <option key={page.slug || "/"} value={page.slug}>
                               {pageTitle(page)}
                             </option>
                           ))}
@@ -1626,7 +1626,7 @@ export default function AdminPage() {
                           <li key={entry.id}>
                             <span>{pageTitle(page)}</span>
                             <small>
-                              {SITE_HOST}/{page.slug}
+                              {pageAddress(page.slug)}
                               {entry.pages.length > 1
                                 ? ` · ${entry.pages.length - 1} undersidor`
                                 : ""}
@@ -1679,7 +1679,7 @@ export default function AdminPage() {
       {pendingDelete ? (
         <DeletePageDialog
           title={pageTitle(pendingDelete)}
-          address={`${SITE_HOST}/${pendingDelete.slug}`}
+          address={pageAddress(pendingDelete.slug)}
           childCount={Math.max(0, pendingRemoved.length - 1)}
           value={deleteInput}
           onChange={setDeleteInput}
@@ -1693,7 +1693,7 @@ export default function AdminPage() {
         <DeletePageDialog
           mode="template"
           title={pageTitle(pendingTemplateDelete)}
-          address={`${SITE_HOST}/${pendingTemplateDelete.slug}`}
+          address={pageAddress(pendingTemplateDelete.slug)}
           childCount={0}
           value={deleteInput}
           onChange={setDeleteInput}
@@ -1852,7 +1852,7 @@ function BlockFieldsEditor({
           >
             <option value="">Ingen</option>
             {parents.map((page) => (
-              <option key={page.slug} value={page.slug}>
+              <option key={page.slug || "/"} value={page.slug}>
                 {pageTitle(page)}
               </option>
             ))}
@@ -2057,7 +2057,7 @@ function BlockFieldsEditor({
             >
               <option value="">Ingen sida</option>
               {(pages ?? []).map((page) => (
-                <option key={page.slug} value={`/${page.slug}`}>
+                <option key={page.slug || "/"} value={`/${page.slug}`}>
                   {pageTitle(page)}
                 </option>
               ))}
@@ -2133,6 +2133,10 @@ function BlockFieldsEditor({
       ) : null}
     </>
   );
+}
+
+function pageAddress(slug: string) {
+  return slug ? `${SITE_HOST}/${slug}` : SITE_HOST;
 }
 
 function addressMatches(input: string, address: string) {
@@ -2734,7 +2738,7 @@ function ExpertiseCards({
               >
                 <option value="">Ingen sida</option>
                 {pages.map((page) => (
-                  <option key={page.slug} value={`/${page.slug}`}>
+                  <option key={page.slug || "/"} value={`/${page.slug}`}>
                     {page.title}
                   </option>
                 ))}
@@ -2767,7 +2771,7 @@ function PageChoice({
         <option value="">Välj sida</option>
         {value && !pageHrefs.has(value) ? <option value={value}>{value}</option> : null}
         {pages.map((page) => (
-          <option key={page.slug} value={`/${page.slug}`}>
+          <option key={page.slug || "/"} value={`/${page.slug}`}>
             {page.parentSlug ? `– ${pageTitle(page)}` : pageTitle(page)}
           </option>
         ))}
@@ -3061,7 +3065,7 @@ function NewsCards({
               >
                 <option value="">Ingen sida</option>
                 {pages.map((page) => (
-                  <option key={page.slug} value={`/${page.slug}`}>
+                  <option key={page.slug || "/"} value={`/${page.slug}`}>
                     {page.title}
                   </option>
                 ))}
@@ -3159,7 +3163,7 @@ function OfferingRows({
               >
                 <option value="">Ingen sida</option>
                 {pages.map((page) => (
-                  <option key={page.slug} value={`/${page.slug}`}>
+                  <option key={page.slug || "/"} value={`/${page.slug}`}>
                     {page.title}
                   </option>
                 ))}
@@ -3413,10 +3417,10 @@ function DeleteBlobDialog({
             </p>
             <ul className="admin-modal-uses">
               {uses.map((page) => (
-                <li key={page.slug}>
+                <li key={page.slug || "/"}>
                   <strong>{page.title}</strong>
                   <small>
-                    {SITE_HOST}/{page.slug}
+                    {pageAddress(page.slug)}
                   </small>
                 </li>
               ))}

@@ -439,7 +439,10 @@ export function composeSlug(parentSlug: string | undefined, segment: string): st
 export function validateSlug(input: string, pages: CmsPage[]): string | null {
   const slug = normalizeSlug(input);
 
-  if (!slug) return "Skriv en sökväg, till exempel /payments.";
+  if (!slug) {
+    if (pages.some((page) => page.slug === "")) return "Det finns redan en startsida.";
+    return null;
+  }
 
   const parts = slug.split("/");
   if (parts.length > 2) {
@@ -457,6 +460,7 @@ export function validateSlug(input: string, pages: CmsPage[]): string | null {
 }
 
 export function pageTitle(page: CmsPage): string {
+  if (!page.slug && !page.title.trim()) return "Startsida";
   return page.title.trim() || page.slug;
 }
 
