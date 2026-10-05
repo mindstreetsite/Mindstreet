@@ -47,4 +47,4 @@ Existing stored themes that fall outside the list still render via `.cms-theme-*
 
 ## Surfaces
 
-`.cms-theme-{id}` sets `background` and `color` from the surface. Dark text (`--on-dark`) is for ink, steel, slate, charcoal, rust, and sage. Everything else uses `--on-light` (navy).
+`.cms-theme-{id}` sets `background` and `color` from the surface. White text (`--on-dark`) is for ink, steel, slate, charcoal, rust, and sage. Everything else uses `--on-light` (navy).
