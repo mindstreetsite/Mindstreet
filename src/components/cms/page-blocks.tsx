@@ -85,6 +85,10 @@ function BlockView({
   }
 
   if (block.type === "hero") {
+    const heroButtons = [
+      { label: block.buttonLabel?.trim() ?? "", href: block.buttonHref?.trim() || "#" },
+      { label: block.button2Label?.trim() ?? "", href: block.button2Href?.trim() || "#" },
+    ].filter((button) => button.label);
     return (
       <section className="hero cms-hero">
         {block.image ? (
@@ -93,12 +97,24 @@ function BlockView({
           <div className="hero-photo cms-hero-fallback" />
         )}
         <div className="hero-shade" />
+        {block.shape ? (
+          <img className="hero-shape" src="/icons/hero-shape.svg" alt="" />
+        ) : null}
         {withHeader ? <Header items={menu} /> : null}
         <div className="hero-content">
           <div>
             <h1>{block.heading}</h1>
             {block.body ? <p className="cms-hero-lead">{block.body}</p> : null}
           </div>
+          {heroButtons.length > 0 ? (
+            <div className="hero-actions">
+              {heroButtons.map((button, index) => (
+                <a key={index} className="btn btn-light" href={button.href}>
+                  {button.label}
+                </a>
+              ))}
+            </div>
+          ) : null}
         </div>
       </section>
     );

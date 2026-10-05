@@ -133,6 +133,7 @@ function blockCompletenessIssues(block: CmsBlock): CompletenessIssue[] {
     fields.body &&
     block.type !== "contactCards" &&
     block.type !== "imageText" &&
+    block.type !== "hero" &&
     blank(block.body)
   ) {
     issues.push(blockIssue(block, "body", "Fyll i text", "fyll i text"));
@@ -166,15 +167,15 @@ function blockCompletenessIssues(block: CmsBlock): CompletenessIssue[] {
   const items = block.items ?? [];
   if (block.type === "expertise") {
     items.forEach((item, index) => {
-      issues.push(...cardIssues(block, item, index, ["heading", "body", "href"]));
+      issues.push(...cardIssues(block, item, index, ["heading", "body"]));
     });
   } else if (block.type === "offering") {
     items.forEach((item, index) => {
-      issues.push(...cardIssues(block, item, index, ["heading", "body", "buttonLabel", "href"]));
+      issues.push(...cardIssues(block, item, index, ["heading", "body", "buttonLabel"]));
     });
   } else if (isNewsBlock(block.type)) {
     items.forEach((item, index) => {
-      issues.push(...cardIssues(block, item, index, ["image", "publishedAt", "heading", "href"]));
+      issues.push(...cardIssues(block, item, index, ["image", "publishedAt", "heading"]));
     });
   } else if (block.type === "textColumn") {
     items.forEach((item, index) => {
@@ -258,6 +259,8 @@ function collectPageHrefs(page: CmsPage): Set<string> {
   for (const block of page.blocks) {
     const buttonHref = block.buttonHref?.trim();
     if (buttonHref) hrefs.add(cmsPagePath(buttonHref));
+    const button2Href = block.button2Href?.trim();
+    if (button2Href) hrefs.add(cmsPagePath(button2Href));
     for (const item of block.items ?? []) {
       const href = item.href.trim();
       if (href) hrefs.add(cmsPagePath(href));

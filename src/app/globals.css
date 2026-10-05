@@ -145,10 +145,12 @@ p {
 
 .hero-shape {
   position: absolute;
-  left: 30%;
-  top: -193px;
+  left: 74%;
+  top: 72%;
+  width: 1839.89px;
+  height: 1054.1px;
   max-width: none;
-  transform: rotate(-90deg);
+  transform: translate(-50%, -50%) rotate(-90deg) scale(1.2);
   pointer-events: none;
   z-index: 0;
 }
@@ -209,6 +211,46 @@ p {
   gap: 32px;
   flex-shrink: 0;
   margin-bottom: 8px;
+}
+
+.hero-actions .btn {
+  position: relative;
+  flex: none;
+  width: 170px;
+  height: 56.45px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--font-lato), "Lato", sans-serif;
+  font-style: normal;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 19px;
+  text-align: center;
+  color: #fff;
+}
+
+.hero-actions .btn::before {
+  content: "";
+  position: absolute;
+  box-sizing: border-box;
+  height: 44px;
+  left: 0;
+  right: 0;
+  top: calc(50% - 44px / 2 - 0.23px);
+  border: 1px solid #fff;
+  border-radius: 37px;
+  transition: background-color 0.2s ease;
+}
+
+.hero-actions .btn:hover {
+  background: transparent;
+  color: var(--footer);
+}
+
+.hero-actions .btn:hover::before {
+  background: #fff;
 }
 
 .menu-layer {

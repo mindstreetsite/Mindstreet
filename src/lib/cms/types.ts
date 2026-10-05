@@ -66,6 +66,8 @@ export type CmsBlock = {
   eyebrow?: string;
   buttonLabel?: string;
   buttonHref?: string;
+  button2Label?: string;
+  button2Href?: string;
   quote?: string;
   quoteCredit?: string;
   quoteAfter?: number;

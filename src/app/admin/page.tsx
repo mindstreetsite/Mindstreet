@@ -1973,6 +1973,56 @@ function BlockFieldsEditor({
           </AdminField>
         )
       ) : null}
+      {block.type === "hero" ? (
+        <>
+          <label className="admin-check">
+            <input
+              type="checkbox"
+              checked={block.shape === true}
+              onChange={(event) => onChange({ shape: event.target.checked ? true : undefined })}
+            />
+            Vector
+          </label>
+          <AdminField label="Knapp">
+            <input
+              value={block.buttonLabel ?? ""}
+              onChange={(event) => onChange({ buttonLabel: event.target.value })}
+            />
+          </AdminField>
+          <AdminField label="Sida">
+            <select
+              value={block.buttonHref ?? ""}
+              onChange={(event) => onChange({ buttonHref: event.target.value })}
+            >
+              <option value="">Ingen sida</option>
+              {(pages ?? []).map((page) => (
+                <option key={page.slug || "/"} value={`/${page.slug}`}>
+                  {pageTitle(page)}
+                </option>
+              ))}
+            </select>
+          </AdminField>
+          <AdminField label="Knapp 2">
+            <input
+              value={block.button2Label ?? ""}
+              onChange={(event) => onChange({ button2Label: event.target.value })}
+            />
+          </AdminField>
+          <AdminField label="Sida">
+            <select
+              value={block.button2Href ?? ""}
+              onChange={(event) => onChange({ button2Href: event.target.value })}
+            >
+              <option value="">Ingen sida</option>
+              {(pages ?? []).map((page) => (
+                <option key={`2-${page.slug || "/"}`} value={`/${page.slug}`}>
+                  {pageTitle(page)}
+                </option>
+              ))}
+            </select>
+          </AdminField>
+        </>
+      ) : null}
       {fields.quote ? (
         <>
           <label className="admin-check">
