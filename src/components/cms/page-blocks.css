@@ -3,10 +3,10 @@
   margin: 0 auto;
   padding: 72px var(--gutter) 88px;
   color: var(--text);
-  font-family: var(--font-lato), "Lato", sans-serif;
+  font-family: var(--font-sans);
   font-style: normal;
   font-size: 20px;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   line-height: 35px;
 }
 
@@ -20,7 +20,7 @@
   font-family: inherit;
   font-size: 30px;
   font-style: normal;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   line-height: 35px;
 }
 
@@ -30,7 +30,7 @@
   font-family: inherit;
   font-size: 20px;
   font-style: normal;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   line-height: 35px;
 }
 
@@ -46,7 +46,7 @@
   max-width: 36ch;
   margin-top: 24px;
   font-size: clamp(18px, 1.6vw, 22px);
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   line-height: 1.45;
 }
 
@@ -83,7 +83,7 @@
 .cms-missing h1 {
   margin-bottom: 16px;
   font-size: clamp(32px, 4vw, 48px);
-  font-weight: 400;
+  font-weight: var(--weight-regular);
 }
 
 .cms-missing p {
@@ -320,7 +320,7 @@
 .cms-module-copy h2 {
   margin-bottom: 25px;
   font-size: clamp(32px, 3.1vw, 45px);
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   line-height: 1.2;
 }
 
@@ -350,7 +350,7 @@
 .cms-contact-cards h2 {
   margin-bottom: 16px;
   font-size: 45px;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   letter-spacing: -1px;
   line-height: 1.1;
 }
@@ -459,7 +459,7 @@
   padding-bottom: 16px;
   border-bottom: 1px solid color-mix(in srgb, var(--navy) 28%, transparent);
   font-size: clamp(32px, 3.1vw, 45px);
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   line-height: 1.2;
 }
 
@@ -529,7 +529,7 @@
   width: 100%;
   margin: 0 0 40px;
   font-size: 30px;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   line-height: 40px;
 }
 
@@ -547,7 +547,7 @@
   color: var(--navy);
   background: transparent;
   font-size: 15px;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   line-height: 18px;
 }
 
@@ -585,7 +585,7 @@
   padding: 48px var(--gutter) 0;
   color: #122d2d;
   font-size: 16px;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   line-height: 19px;
   text-decoration: none;
 }
@@ -619,9 +619,9 @@
 .cms-article h2 {
   margin-bottom: 28px;
   color: #000;
-  font-family: var(--font-lato), "Lato", sans-serif;
+  font-family: var(--font-sans);
   font-style: normal;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   font-size: 60px;
   line-height: 80px;
 }
@@ -636,7 +636,7 @@
   color: inherit;
   font-family: inherit;
   font-size: 20px;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   line-height: 1.7;
 }
 
@@ -654,9 +654,9 @@
 .cms-article-copy p {
   margin: 0 0 28px;
   color: #000;
-  font-family: var(--font-lato), "Lato", sans-serif;
+  font-family: var(--font-sans);
   font-style: normal;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   font-size: 20px;
   line-height: 35px;
 }
@@ -666,9 +666,9 @@
   margin: 0 0 28px;
   padding-left: 1.4em;
   color: #000;
-  font-family: var(--font-lato), "Lato", sans-serif;
+  font-family: var(--font-sans);
   font-size: 20px;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   line-height: 35px;
 }
 
@@ -695,9 +695,9 @@
   padding: 4px 0 4px 62px;
   border-left: 3px solid var(--navy);
   color: inherit;
-  font-family: var(--font-lato), "Lato", sans-serif;
+  font-family: var(--font-sans);
   font-style: italic;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
 }
 
 .cms-article-copy .cms-article-quote-text {
@@ -716,9 +716,9 @@
 .cms-article-copy .cms-article-quote-text ol {
   margin: 0 0 56px;
   color: #000;
-  font-family: var(--font-lato), "Lato", sans-serif;
+  font-family: var(--font-sans);
   font-style: italic;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   font-size: 30px;
   line-height: 56px;
 }
@@ -741,15 +741,15 @@
 }
 
 .cms-article-copy .cms-article-quote-text strong {
-  font-weight: 700;
+  font-weight: var(--weight-bold);
 }
 
 .cms-article-copy .cms-article-quote-credit {
   margin: 56px 0 0;
   color: #777;
-  font-family: var(--font-lato), "Lato", sans-serif;
+  font-family: var(--font-sans);
   font-style: italic;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   font-size: 25px;
   line-height: 56px;
 }
@@ -767,7 +767,7 @@
 .cms-expertise h2 {
   margin-bottom: 84px;
   font-size: 45px;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   letter-spacing: -1px;
   line-height: 1.1;
 }
@@ -805,7 +805,7 @@
   margin: 0 0 18px;
   color: var(--accent);
   font-size: 35px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   letter-spacing: -1px;
   line-height: 1.1;
 }

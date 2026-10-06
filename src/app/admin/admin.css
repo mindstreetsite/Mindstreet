@@ -143,7 +143,7 @@
 .admin-title,
 .admin h3 {
   margin: 0;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
 }
 
 .admin-title {
@@ -475,7 +475,7 @@
 
 .admin-completeness > p {
   margin: 0 0 10px;
-  font-weight: 600;
+  font-weight: var(--weight-bold);
 }
 
 .admin-completeness ul {
@@ -582,7 +582,7 @@
   background: var(--notice);
   color: var(--notice-text);
   font-size: 10px;
-  font-weight: 600;
+  font-weight: var(--weight-bold);
   line-height: 1.4;
   white-space: nowrap;
 }
@@ -769,7 +769,7 @@
 .admin-modal h2 {
   margin: 0 0 8px;
   font-size: 22px;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
 }
 
 .admin-modal p {
@@ -805,7 +805,7 @@
 
 .admin-modal-uses strong {
   display: block;
-  font-weight: 500;
+  font-weight: var(--weight-bold);
 }
 
 .admin-modal-uses small {
@@ -1639,7 +1639,7 @@
 .admin-cards legend {
   margin-bottom: 8px;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
 }
 
 .admin-cards-add {
@@ -1805,7 +1805,7 @@
   color: var(--text);
   font: inherit;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   line-height: 1;
   cursor: pointer;
 }
@@ -1816,7 +1816,7 @@
 
 .admin-format-bar button.admin-format-italic {
   font-style: italic;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
 }
 
 .admin-format-bar button.admin-format-underline {
@@ -1829,7 +1829,7 @@
 }
 
 .admin-format-clear {
-  font-weight: 500;
+  font-weight: var(--weight-bold);
   font-size: 15px;
   letter-spacing: -0.03em;
 }

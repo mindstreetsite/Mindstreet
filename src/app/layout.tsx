@@ -1,19 +1,6 @@
 import type { Metadata } from "next";
-import { Lato, Prompt } from "next/font/google";
+import { lato } from "@/lib/design/lato";
 import "./globals.css";
-
-const lato = Lato({
-  subsets: ["latin"],
-  weight: ["400", "700", "900"],
-  style: ["normal", "italic"],
-  variable: "--font-lato",
-});
-
-const prompt = Prompt({
-  subsets: ["latin"],
-  weight: ["300"],
-  variable: "--font-prompt",
-});
 
 export const metadata: Metadata = {
   title: "Mindstreet",
@@ -27,7 +14,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="sv" className={`${lato.variable} ${prompt.variable}`}>
+    <html lang="sv" className={lato.variable}>
       <body>{children}</body>
     </html>
   );
