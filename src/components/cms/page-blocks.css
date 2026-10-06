@@ -34,8 +34,34 @@
   line-height: 35px;
 }
 
-.cms-text-column p:last-child {
+.cms-text-column p:last-child,
+.cms-text-column ul:last-child,
+.cms-text-column ol:last-child {
   margin-bottom: 0;
+}
+
+.cms-text-column ul,
+.cms-text-column ol {
+  margin: 0 0 28px;
+  padding-left: 1.4em;
+}
+
+.cms-text-column .cms-article-subhead {
+  font-size: 30px;
+}
+
+.cms-text-column em {
+  font-style: italic;
+}
+
+.cms-text-column u {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cms-text-column a {
+  color: inherit;
+  text-underline-offset: 3px;
 }
 
 .cms-hero h1 {
@@ -325,7 +351,7 @@
 }
 
 .cms-module-copy h2:has(+ .cms-contact-lines) {
-  margin-bottom: 12px;
+  margin-bottom: 24px;
 }
 
 .cms-contact-lines {

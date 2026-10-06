@@ -2725,16 +2725,14 @@ function TextColumnSections({
                 onChange={(event) => patch(item.id, { heading: event.target.value })}
               />
             </AdminField>
-            <AdminField
+            <FormattedText
               label="Text"
+              rows={6}
+              value={item.body}
               issue={findCompletenessIssue(issues, "body", blockId, item.id)}
-            >
-              <textarea
-                rows={6}
-                value={item.body}
-                onChange={(event) => patch(item.id, { body: event.target.value })}
-              />
-            </AdminField>
+              lines
+              onChange={(body) => patch(item.id, { body })}
+            />
           </li>
         ))}
       </ol>

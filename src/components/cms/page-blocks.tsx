@@ -141,7 +141,7 @@ function BlockView({
             <div key={item.id} className="cms-text-column-section">
               {item.heading.trim() ? <h2>{item.heading}</h2> : null}
               {paragraphs.map((paragraph, index) => (
-                <p key={index}>{paragraph}</p>
+                <ArticleParagraph key={index} text={paragraph} />
               ))}
             </div>
           );
