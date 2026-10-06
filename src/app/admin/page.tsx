@@ -2861,6 +2861,15 @@ function MenuRows({
     onChange(items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...next } : item)));
   }
 
+  function move<T>(list: T[], index: number, direction: -1 | 1): T[] {
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= list.length) return list;
+    const next = [...list];
+    const [row] = next.splice(index, 1);
+    next.splice(nextIndex, 0, row);
+    return next;
+  }
+
   const pageHrefs = new Set(pages.map((page) => `/${page.slug}`));
 
   return (
@@ -2871,12 +2880,28 @@ function MenuRows({
           <li key={index}>
             <div className="admin-block-head">
               <strong>Rad {index + 1}</strong>
-              <button
-                type="button"
-                onClick={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))}
-              >
-                Ta bort
-              </button>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => onChange(move(items, index, -1))}
+                  disabled={index === 0}
+                >
+                  Upp
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onChange(move(items, index, 1))}
+                  disabled={index === items.length - 1}
+                >
+                  Ner
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))}
+                >
+                  Ta bort
+                </button>
+              </div>
             </div>
             <AdminField label="Text">
               <input
@@ -2897,16 +2922,40 @@ function MenuRows({
                   <li key={childIndex}>
                     <div className="admin-block-head">
                       <strong>Underrad {childIndex + 1}</strong>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          patch(index, {
-                            children: (item.children ?? []).filter((_, row) => row !== childIndex),
-                          })
-                        }
-                      >
-                        Ta bort
-                      </button>
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            patch(index, {
+                              children: move(item.children ?? [], childIndex, -1),
+                            })
+                          }
+                          disabled={childIndex === 0}
+                        >
+                          Upp
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            patch(index, {
+                              children: move(item.children ?? [], childIndex, 1),
+                            })
+                          }
+                          disabled={childIndex === (item.children ?? []).length - 1}
+                        >
+                          Ner
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            patch(index, {
+                              children: (item.children ?? []).filter((_, row) => row !== childIndex),
+                            })
+                          }
+                        >
+                          Ta bort
+                        </button>
+                      </div>
                     </div>
                     <AdminField label="Text">
                       <input
