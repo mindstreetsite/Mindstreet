@@ -1813,6 +1813,10 @@ function BlockFieldsEditor({
   const quoteIssue = findCompletenessIssue(issues, "quote", block.id);
   const buttonIssue = findCompletenessIssue(issues, "buttonLabel", block.id);
   const hrefIssue = findCompletenessIssue(issues, "buttonHref", block.id);
+  const pageLinkSelect = block.type === "imageText" || block.type === "imagePair";
+  const savedHref = block.buttonHref ?? "";
+  const linkPages = pages ?? [];
+  const savedHrefListed = linkPages.some((page) => `/${page.slug}` === savedHref);
   const imageIssue = findCompletenessIssue(issues, "image", block.id);
   const image2Issue = findCompletenessIssue(issues, "image2", block.id);
   const quoteFields =
@@ -2123,10 +2127,25 @@ function BlockFieldsEditor({
             />
           </AdminField>
           <AdminField label="Länk" issue={hrefIssue}>
-            <input
-              value={block.buttonHref ?? ""}
-              onChange={(event) => onChange({ buttonHref: event.target.value })}
-            />
+            {pageLinkSelect ? (
+              <select
+                value={savedHref}
+                onChange={(event) => onChange({ buttonHref: event.target.value })}
+              >
+                <option value="">Ingen sida</option>
+                {savedHref && !savedHrefListed ? <option value={savedHref}>{savedHref}</option> : null}
+                {linkPages.map((page) => (
+                  <option key={page.slug || "/"} value={`/${page.slug}`}>
+                    {pageTitle(page)}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                value={block.buttonHref ?? ""}
+                onChange={(event) => onChange({ buttonHref: event.target.value })}
+              />
+            )}
           </AdminField>
         </>
       ) : null}

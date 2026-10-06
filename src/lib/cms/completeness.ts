@@ -133,6 +133,7 @@ function blockCompletenessIssues(block: CmsBlock): CompletenessIssue[] {
     fields.body &&
     block.type !== "contactCards" &&
     block.type !== "imageText" &&
+    block.type !== "imagePair" &&
     block.type !== "hero" &&
     blank(block.body)
   ) {
@@ -150,6 +151,7 @@ function blockCompletenessIssues(block: CmsBlock): CompletenessIssue[] {
     block.type !== "contact" &&
     block.type !== "contactCards" &&
     block.type !== "imageText" &&
+    block.type !== "imagePair" &&
     (block.type !== "statement" || block.buttonLabel !== undefined);
   if (buttonRequired) {
     if (blank(block.buttonLabel)) {

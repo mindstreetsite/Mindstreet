@@ -604,7 +604,7 @@ export function fieldsFor(type: BlockType): BlockFields {
     return {
       ...none,
       heading: "Rubrik",
-      body: null,
+      body: "Text",
       eyebrow: true,
       image: true,
       image2: true,
