@@ -298,11 +298,18 @@ function BlockView({
   }
 
   if (block.type === "lead") {
+    const paragraphs = articleParagraphs(block.body);
     return (
       <ThemedSurface block={block}>
         <div className="intro">
           <h2>{block.heading}</h2>
-          <p>{block.body}</p>
+          {paragraphs.length > 0 ? (
+            <div>
+              {paragraphs.map((paragraph, index) => (
+                <p key={index}>{paragraph}</p>
+              ))}
+            </div>
+          ) : null}
         </div>
       </ThemedSurface>
     );

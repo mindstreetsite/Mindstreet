@@ -447,8 +447,13 @@ p {
 }
 
 .intro p {
+  margin: 0 0 35px;
   font-size: 20px;
   line-height: 35px;
+}
+
+.intro p:last-child {
+  margin-bottom: 0;
 }
 
 .section-inner {
