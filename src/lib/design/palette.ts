@@ -125,6 +125,7 @@ const themesByType: Partial<Record<BlockType, BlockTheme[]>> = {
   split: moduleSurfaces,
   lead: textSurfaces,
   text: textSurfaces,
+  contactUs: moduleSurfaces,
   article: textSurfaces,
   sectionHeader: textSurfaces,
   statement: statementSurfaces,

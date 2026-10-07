@@ -21,7 +21,9 @@ export function PageBlocks({
   publishedAt?: string;
 }) {
   const firstIsHero = page.blocks[0]?.type === "hero";
-  const hasPageHeader = page.blocks.some((block) => block.type === "pageHeader");
+  const hasPageHeader = page.blocks.some(
+    (block) => block.type === "pageHeader" || block.type === "contactUs",
+  );
   const parentHref = page.parentSlug ? `/${page.parentSlug}` : "/";
 
   return (
@@ -348,12 +350,13 @@ function BlockView({
     );
   }
 
-  if (block.type === "contactCards") {
+  if (block.type === "contactCards" || block.type === "contactUs") {
     const items = block.items ?? [];
-    return (
+    const cards = (
       <section className="cms-contact-cards">
         <div className="section-inner">
-          {block.heading.trim() || block.body.trim() || block.buttonLabel?.trim() ? (
+          {block.type === "contactCards" &&
+          (block.heading.trim() || block.body.trim() || block.buttonLabel?.trim()) ? (
             <div className="cms-contact-cards-intro">
               {block.heading.trim() ? <h2>{block.heading}</h2> : null}
               {block.body.trim() ? <p className="cms-contact-cards-text">{block.body}</p> : null}
@@ -362,6 +365,13 @@ function BlockView({
                   {block.buttonLabel}
                 </a>
               ) : null}
+            </div>
+          ) : null}
+          {block.type === "contactUs" && block.buttonLabel?.trim() ? (
+            <div className="cms-contact-cards-intro">
+              <a className="btn cms-statement-link" href={block.buttonHref?.trim() || "#"}>
+                {block.buttonLabel}
+              </a>
             </div>
           ) : null}
           <div className="cms-contact-card-grid">
@@ -381,6 +391,26 @@ function BlockView({
           </div>
         </div>
       </section>
+    );
+    if (block.type === "contactCards") return cards;
+    const theme = resolveTheme(block);
+    const paragraphs = articleParagraphs(block.body);
+    return (
+      <div className={`cms-contact-us cms-theme-${theme}`}>
+        <div className="cms-contact-us-shape" aria-hidden="true" />
+        <Header variant="bar" items={menu} />
+        <div className="intro">
+          <h2>{block.heading}</h2>
+          {paragraphs.length > 0 ? (
+            <div>
+              {paragraphs.map((paragraph, index) => (
+                <p key={index}>{paragraph}</p>
+              ))}
+            </div>
+          ) : null}
+        </div>
+        {cards}
+      </div>
     );
   }
 
@@ -475,7 +505,7 @@ function ContactDetailList({
 
   return (
     <ul className="cms-contact-lines">
-      {lines.name ? <li>{lines.name}</li> : null}
+      {lines.name ? <li className="cms-contact-name">{lines.name}</li> : null}
       {lines.title ? <li>{lines.title}</li> : null}
       {lines.email ? (
         <li>

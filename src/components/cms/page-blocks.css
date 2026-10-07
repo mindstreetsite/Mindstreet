@@ -285,6 +285,36 @@
   z-index: 1;
 }
 
+.cms-contact-us {
+  position: relative;
+  overflow: hidden;
+}
+
+.cms-contact-us-shape {
+  position: absolute;
+  left: -30%;
+  top: 2%;
+  width: 170%;
+  height: 115%;
+  background: color-mix(in srgb, var(--linen) 30%, transparent);
+  transform: rotate(-33.88deg);
+  pointer-events: none;
+  z-index: 0;
+  -webkit-mask: url("/icons/about-shape.svg") center / contain no-repeat;
+  mask: url("/icons/about-shape.svg") center / contain no-repeat;
+}
+
+.cms-contact-us .site-header.is-bar {
+  background: transparent;
+}
+
+.cms-contact-us .site-header,
+.cms-contact-us .intro,
+.cms-contact-us .cms-contact-cards {
+  position: relative;
+  z-index: 1;
+}
+
 .cms-media-shape {
   position: absolute;
   left: 50%;
@@ -360,6 +390,26 @@
   list-style: none;
   font-size: 20px;
   line-height: 35px;
+}
+
+.cms-module-copy .cms-contact-lines {
+  font-size: 25px;
+  font-weight: var(--weight-regular);
+}
+
+.cms-module-copy .cms-contact-name {
+  font-size: 30px;
+  font-weight: var(--weight-bold);
+}
+
+.cms-contact-us .cms-contact-lines {
+  font-size: 25px;
+  font-weight: var(--weight-regular);
+}
+
+.cms-contact-us .cms-contact-name {
+  font-size: 30px;
+  font-weight: var(--weight-bold);
 }
 
 .cms-contact-lines a {
@@ -887,7 +937,8 @@
     max-width: 520px;
   }
 
-  .cms-media-shape {
+  .cms-media-shape,
+  .cms-contact-us-shape {
     display: none;
   }
 }

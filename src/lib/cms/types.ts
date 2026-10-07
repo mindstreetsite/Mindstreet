@@ -7,6 +7,7 @@ export type BlockType =
   | "imageText"
   | "contact"
   | "contactCards"
+  | "contactUs"
   | "imagePair"
   | "sectionHeader"
   | "highlight"

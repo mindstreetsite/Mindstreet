@@ -38,7 +38,7 @@ Read [src/lib/design/palette.ts](src/lib/design/palette.ts) before any color cha
 
 Call `themesFor(blockType)` for the swatch list.
 
-- **imageText, contact, imagePair, split:** sand, coral, sage, slate, steel, ink (Navy), fog (Warm gray), mist, linen, ice, blush
+- **imageText, contact, imagePair, split, contactUs:** sand, coral, sage, slate, steel, ink (Navy), fog (Warm gray), mist, linen, ice, blush
 - **lead, text, article, sectionHeader:** white, fog, mist, linen, blush, sand
 - **statement:** the light list plus ink, charcoal (Dark gray), rust
 - **expertise, offering, news, newsTwelve, textColumn, pageHeader, hero, banner, highlight:** no swatch. Expertise stays blush with rust heading. Hero, banner, and highlight stay image plus dark shade.

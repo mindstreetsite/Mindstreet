@@ -150,6 +150,7 @@ function blockCompletenessIssues(block: CmsBlock): CompletenessIssue[] {
     fields.button &&
     block.type !== "contact" &&
     block.type !== "contactCards" &&
+    block.type !== "contactUs" &&
     block.type !== "imageText" &&
     block.type !== "imagePair" &&
     (block.type !== "statement" || block.buttonLabel !== undefined);

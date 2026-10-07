@@ -75,6 +75,11 @@ export const library: {
     description: "Flera kort med bild ovanför kontaktuppgifter",
   },
   {
+    type: "contactUs",
+    label: "Kontakta oss",
+    description: "Header, text och kontaktkort",
+  },
+  {
     type: "imagePair",
     label: "Två bilder och text",
     description: "Två överlappande foton",
@@ -185,6 +190,13 @@ const defaults: Record<BlockType, Omit<CmsBlock, "id" | "type">> = {
   contactCards: {
     heading: "",
     body: "",
+  },
+  contactUs: {
+    heading: "Lorem ipsum dolor sit amet",
+    body: loremBody,
+    theme: "sand",
+    buttonLabel: "",
+    buttonHref: "",
   },
   imagePair: {
     heading: experienceHeading,
@@ -458,7 +470,7 @@ export function createBlock(type: BlockType): CmsBlock {
     ...(type === "news" ? { items: createNewsItems() } : {}),
     ...(type === "newsTwelve" ? { items: createNewsItems(12) } : {}),
     ...(type === "textColumn" ? { items: createTextColumnItems() } : {}),
-    ...(type === "contactCards" ? { items: [createContactCard()] } : {}),
+    ...(type === "contactCards" || type === "contactUs" ? { items: [createContactCard()] } : {}),
   };
 }
 
@@ -505,7 +517,7 @@ export function cloneTemplateBlocks(blocks: CmsBlock[]): CmsBlock[] {
           : {}),
       }));
     }
-    if (block.type === "contactCards") {
+    if (block.type === "contactCards" || block.type === "contactUs") {
       next.items = (block.items ?? []).map(() => createContactCard());
     }
     return next;
@@ -537,6 +549,7 @@ const expandedThemeTypes = new Set<BlockType>([
   "imageText",
   "lead",
   "text",
+  "contactUs",
   "contact",
   "imagePair",
   "split",
@@ -624,6 +637,10 @@ export function fieldsFor(type: BlockType): BlockFields {
 
   if (type === "contactCards") {
     return { ...none, heading: "Rubrik", body: "Text", button: true };
+  }
+
+  if (type === "contactUs") {
+    return { ...none, heading: "Rubrik", body: "Text", button: true, theme: true };
   }
 
   if (type === "expertise" || type === "offering" || isNewsBlock(type)) {

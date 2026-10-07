@@ -1071,7 +1071,7 @@ export default function AdminPage() {
                                     onChange={(items) => updateBlock(block.id, { items })}
                                   />
                                 ) : null}
-                                {block.type === "contactCards" ? (
+                                {block.type === "contactCards" || block.type === "contactUs" ? (
                                   <ContactCards
                                     items={block.items ?? []}
                                     onChange={(items) => updateBlock(block.id, { items })}
@@ -1103,7 +1103,10 @@ export default function AdminPage() {
                                     onChange={(items) => updateBlock(block.id, { items })}
                                   />
                                 ) : null}
-                                {index === 0 && (block.type === "pageHeader" || block.type === "hero") ? (
+                                {index === 0 &&
+                                (block.type === "pageHeader" ||
+                                  block.type === "hero" ||
+                                  block.type === "contactUs") ? (
                                   <MenuRows
                                     items={menu}
                                     pages={orderedPages(pages)}
@@ -1321,7 +1324,7 @@ export default function AdminPage() {
                                       onChange={(items) => updateDraftBlock(block.id, { items })}
                                     />
                                   ) : null}
-                                  {block.type === "contactCards" ? (
+                                  {block.type === "contactCards" || block.type === "contactUs" ? (
                                     <ContactCards
                                       items={block.items ?? []}
                                       onChange={(items) => updateDraftBlock(block.id, { items })}
@@ -1353,7 +1356,10 @@ export default function AdminPage() {
                                       onChange={(items) => updateDraftBlock(block.id, { items })}
                                     />
                                   ) : null}
-                                  {index === 0 && (block.type === "pageHeader" || block.type === "hero") ? (
+                                  {index === 0 &&
+                                  (block.type === "pageHeader" ||
+                                    block.type === "hero" ||
+                                    block.type === "contactUs") ? (
                                     <MenuRows
                                       items={menu}
                                       pages={orderedPages(pages)}
@@ -2095,7 +2101,7 @@ function BlockFieldsEditor({
           ) : null}
         </>
       ) : null}
-      {fields.button && block.type === "contactCards" ? (
+      {fields.button && (block.type === "contactCards" || block.type === "contactUs") ? (
         <>
           <AdminField label="Knapp">
             <input
@@ -2118,7 +2124,10 @@ function BlockFieldsEditor({
           </AdminField>
         </>
       ) : null}
-      {fields.button && block.type !== "statement" && block.type !== "contactCards" ? (
+      {fields.button &&
+      block.type !== "statement" &&
+      block.type !== "contactCards" &&
+      block.type !== "contactUs" ? (
         <>
           <AdminField label="Knapp" issue={buttonIssue}>
             <input
