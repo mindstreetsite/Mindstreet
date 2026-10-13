@@ -64,6 +64,41 @@
   text-underline-offset: 3px;
 }
 
+.cms-image {
+  max-width: var(--content);
+  margin: 0 auto;
+  padding: 72px 106px;
+}
+
+.cms-image img,
+.cms-image-fallback {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1228 / 751;
+  object-fit: cover;
+  border-radius: 20px;
+}
+
+.cms-image-fallback {
+  background: color-mix(in srgb, var(--navy) 18%, transparent);
+}
+
+.cms-surface:has(+ .cms-image) .intro {
+  padding-bottom: 48px;
+}
+
+.cms-surface + .cms-image {
+  padding-top: 0;
+}
+
+.cms-image:has(+ .cms-text-column) {
+  padding-bottom: 0;
+}
+
+.cms-image + .cms-text-column {
+  padding-top: 48px;
+}
+
 .cms-hero h1 {
   max-width: 15.5ch;
 }
@@ -951,6 +986,10 @@
 }
 
 @media (max-width: 980px) {
+  .cms-image {
+    padding-inline: var(--gutter);
+  }
+
   .cms-contact-card-grid {
     grid-template-columns: 1fr;
   }

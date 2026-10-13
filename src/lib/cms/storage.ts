@@ -457,6 +457,104 @@ export function validateSlug(
   return null;
 }
 
+function pagePath(slug: string): string {
+  return slug ? `/${slug}` : "/";
+}
+
+function rewritePath(href: string, fromSlug: string, toSlug: string): string {
+  const fromPath = pagePath(fromSlug);
+  const toPath = pagePath(toSlug);
+  const value = href.trim();
+  if (!fromSlug) {
+    if (value === "/" || value === "") return toPath;
+    return href;
+  }
+  if (value === fromPath) return toPath;
+  if (value.startsWith(`${fromPath}/`)) return `${toPath}${value.slice(fromPath.length)}`;
+  return href;
+}
+
+function rewriteMenuPaths(items: CmsLink[], fromSlug: string, toSlug: string): CmsLink[] {
+  return items.map((item) => ({
+    ...item,
+    href: rewritePath(item.href, fromSlug, toSlug),
+    children: item.children?.map((child) => ({
+      ...child,
+      href: rewritePath(child.href, fromSlug, toSlug),
+    })),
+  }));
+}
+
+function rewriteBlockPaths(block: CmsBlock, fromSlug: string, toSlug: string): CmsBlock {
+  return {
+    ...block,
+    buttonHref: block.buttonHref !== undefined ? rewritePath(block.buttonHref, fromSlug, toSlug) : block.buttonHref,
+    button2Href:
+      block.button2Href !== undefined ? rewritePath(block.button2Href, fromSlug, toSlug) : block.button2Href,
+    parentSlug: block.parentSlug === fromSlug ? toSlug || undefined : block.parentSlug,
+    items: block.items?.map((item) => ({
+      ...item,
+      href: rewritePath(item.href, fromSlug, toSlug),
+    })),
+    menu: block.menu ? rewriteMenuPaths(block.menu, fromSlug, toSlug) : block.menu,
+  };
+}
+
+function rewriteStoredPaths(page: CmsPage, fromSlug: string, toSlug: string): CmsPage {
+  return {
+    ...page,
+    links: rewriteMenuPaths(page.links, fromSlug, toSlug),
+    blocks: page.blocks.map((block) => rewriteBlockPaths(block, fromSlug, toSlug)),
+    pending: page.pending?.map((block) => rewriteBlockPaths(block, fromSlug, toSlug)),
+  };
+}
+
+export function retargetPageSlug(
+  pages: CmsPage[],
+  menu: CmsLink[],
+  fromSlug: string,
+  toSlug: string,
+): { pages: CmsPage[] | null; menu: CmsLink[] | null; error: string | null } {
+  if (fromSlug === toSlug) return { pages, menu, error: null };
+
+  const slugMap = new Map<string, string>([[fromSlug, toSlug]]);
+  for (const page of pages) {
+    if (page.parentSlug !== fromSlug || !fromSlug) continue;
+    const prefix = `${fromSlug}/`;
+    if (!page.slug.startsWith(prefix)) continue;
+    const next = toSlug ? `${toSlug}/${page.slug.slice(prefix.length)}` : page.slug.slice(prefix.length);
+    if (next.split("/").filter(Boolean).length > 2) {
+      return {
+        pages: null,
+        menu: null,
+        error: "Sökvägen kan bara ha en undersida, till exempel /expertomraden/aml.",
+      };
+    }
+    slugMap.set(page.slug, next);
+  }
+
+  const nextPages = pages.map((page) => {
+    const slug = slugMap.get(page.slug) ?? page.slug;
+    const parentSlug =
+      page.parentSlug !== undefined ? (slugMap.get(page.parentSlug) ?? page.parentSlug) : undefined;
+    let next: CmsPage =
+      slug === page.slug && parentSlug === page.parentSlug
+        ? page
+        : { ...page, slug, parentSlug: parentSlug || undefined };
+    for (const [from, to] of slugMap) {
+      next = rewriteStoredPaths(next, from, to);
+    }
+    return next;
+  });
+
+  let nextMenu = menu;
+  for (const [from, to] of slugMap) {
+    nextMenu = rewriteMenuPaths(nextMenu, from, to);
+  }
+
+  return { pages: nextPages, menu: nextMenu, error: null };
+}
+
 export function pageTitle(page: CmsPage): string {
   if (!page.slug && !page.title.trim()) return "Startsida";
   return page.title.trim() || page.slug;

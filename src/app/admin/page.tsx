@@ -39,7 +39,6 @@ import {
   articleParagraphs,
   backfillTestArticleNews,
   blockLabel,
-  builtinMenuTemplate,
   cloneTemplateBlocks,
   createBlock,
   createCard,
@@ -80,6 +79,7 @@ import {
   readLocalSnapshot,
   restoreArchivedPages,
   restoreTemplateChoice,
+  retargetPageSlug,
   rootPages,
   slugifyTitle,
   templateChoices,
@@ -109,6 +109,7 @@ type EditorMode = "content" | "structure" | "full";
 
 const BLANK_TEMPLATE = "__blank__";
 const UNSELECTED_TEMPLATE = "__unselected__";
+const UNSELECTED_PAGE = "__unselected_page__";
 const HOME_OPTION = "__home__";
 
 function slugToOption(slug: string): string {
@@ -277,9 +278,9 @@ function RoleSwitches({
 }
 
 const panels: { id: Panel; kicker: string; title: string }[] = [
-  { id: "pages", kicker: "Befintliga", title: "Publicerade sidor" },
-  { id: "create", kicker: "Ny sida", title: "Skapa ny sida av mall" },
   { id: "news", kicker: "Nyhet", title: "Lägg till nyhet" },
+  { id: "pages", kicker: "Befintliga", title: "Publicerade sidor" },
+  { id: "create", kicker: "Ny sida", title: "Skapa eller redigera sida" },
   { id: "components", kicker: "Bibliotek", title: "Skapa ny sidmall utifrån komponenter" },
   { id: "images", kicker: "Bilder", title: "Bildbibliotek" },
 ];
@@ -475,9 +476,7 @@ export default function AdminPage() {
   const selectedDraft = selected ? pageDraft(selected) : null;
   const selectedChanged = selected ? hasPendingChanges(selected) : false;
   const selectedIssues = selectedDraft ? pageCompletenessIssues(selectedDraft, pages) : [];
-  const structureDraft = structurePage ? pageDraft(structurePage) : null;
   const structureChanged = structurePage ? hasPendingChanges(structurePage) : false;
-  const structureIssues = structureDraft ? pageCompletenessIssues(structureDraft, pages) : [];
   const templateOptions = templateChoices(templates);
   const newsTemplateOptions = newsTemplateChoices(templateOptions);
   const newsArticles = useMemo(
@@ -493,8 +492,7 @@ export default function AdminPage() {
   const newsDraft = newsArticle ? pageDraft(newsArticle) : null;
   const newsChanged = newsArticle ? hasPendingChanges(newsArticle) : false;
   const newsIssues = newsDraft ? pageCompletenessIssues(newsDraft, pages) : [];
-  const visibleTemplateOptions =
-    panel === "news" ? newsTemplateOptions : [builtinMenuTemplate(), ...templateOptions];
+  const visibleTemplateOptions = panel === "news" ? newsTemplateOptions : templateOptions;
   const templatePage = visibleTemplateOptions.find((page) => page.slug === templateSlug) ?? null;
   const menuSelected = panel === "create" && isBuiltinMenuTemplate(templateSlug ?? "");
   const articleItems = articleNewsCards(pages);
@@ -508,6 +506,7 @@ export default function AdminPage() {
       : null;
   const pendingRemoved = deleteSlug !== null ? pagesRemovedWith(deleteSlug, pages) : [];
   const parents = rootPages(pages).filter((page) => page.slug);
+  const formParents = parents.filter((page) => page.slug !== structureSlug);
   const previewSlug =
     panel === "news"
       ? slugifyTitle(titleInput)
@@ -515,20 +514,21 @@ export default function AdminPage() {
         ? ""
         : composeSlug(parentSlug || undefined, slugifyTitle(titleInput));
   const editorTitle =
-    titleInput.trim() || (panel === "news" ? "Ny nyhet" : "Ny sida");
+    titleInput.trim() ||
+    (panel === "news" ? "Ny nyhet" : structurePage ? pageTitle(structurePage) : "Ny sida");
   const createIssues =
-    templatePage && !menuSelected
+    (panel === "create" && structurePage) || (templatePage && !menuSelected)
       ? pageCompletenessIssues(
           {
-            slug: titleInput.trim() ? previewSlug : "",
+            slug: titleInput.trim() ? previewSlug : structurePage?.slug ?? "",
             title: titleInput.trim(),
             parentSlug:
               panel === "news" || (panel === "create" && createRole === "home")
                 ? undefined
                 : parentSlug || undefined,
             role: panel === "create" ? createRole || undefined : undefined,
-            published,
-            links: [],
+            published: structurePage?.published ?? published,
+            links: structurePage?.links ?? [],
             blocks: draftBlocks,
           },
           pages,
@@ -638,6 +638,7 @@ export default function AdminPage() {
 
   function loadPageDraft(slug: string) {
     draftKey.current = `${slug}:new`;
+    setStructureSlug(null);
     setTemplateSlug(slug);
     setNotice(null);
     if (isBuiltinMenuTemplate(slug)) {
@@ -664,9 +665,26 @@ export default function AdminPage() {
     setPublished(true);
   }
 
+  function loadExistingPage(slug: string) {
+    const page = pagesRef.current.find((entry) => entry.slug === slug);
+    if (!page) return;
+    const draft = pageDraft(page);
+    draftKey.current = `${slug}:edit`;
+    setStructureSlug(slug);
+    setSelectedSlug(slug);
+    setTemplateSlug(null);
+    setTitleInput(page.title);
+    setParentSlug(page.parentSlug ?? "");
+    setCreateRole(page.role ?? "");
+    setPublished(page.published);
+    setDraftBlocks(structuredClone(draft.blocks));
+    setLastSavedSlug(slug);
+    setNotice(null);
+  }
+
   function chooseTemplate(slug: string) {
     setNewsEditSlug(null);
-    if (slug === templateSlug) {
+    if (slug === templateSlug && structureSlug === null) {
       setNotice(null);
       return;
     }
@@ -680,6 +698,23 @@ export default function AdminPage() {
     loadPageDraft(slug);
   }
 
+  function chooseEditPage(slug: string) {
+    setNewsEditSlug(null);
+    if (isBuiltinMenuTemplate(slug)) {
+      if (isBuiltinMenuTemplate(templateSlug ?? "")) {
+        setNotice(null);
+        return;
+      }
+      loadPageDraft(slug);
+      return;
+    }
+    if (slug === structureSlug) {
+      setNotice(null);
+      return;
+    }
+    loadExistingPage(slug);
+  }
+
   function openNewsArticle(slug: string) {
     setNewsEditSlug(slug);
     setSelectedSlug(slug);
@@ -689,8 +724,125 @@ export default function AdminPage() {
     setNotice(null);
   }
 
+  async function saveExistingPage(): Promise<string | null> {
+    const currentSlug = structureSlug;
+    if (currentSlug === null) return null;
+    const current = pagesRef.current;
+    const existing = current.find((page) => page.slug === currentSlug);
+    if (!existing) {
+      setNotice("Sidan finns inte längre.");
+      return null;
+    }
+
+    const title = titleInput.trim();
+    const role = createRole;
+    const parent = role === "home" ? undefined : parentSlug || undefined;
+    if ((!title && parent) || (role === "news" && !title)) {
+      setNotice("Skriv ett sidnamn.");
+      return null;
+    }
+
+    const segment = title ? slugifyTitle(title) : "";
+    const nextSlug = role === "home" ? "" : composeSlug(parent, segment);
+    const roleError = newsRoleError(role, current, currentSlug);
+    if (roleError) {
+      setNotice(roleError);
+      return null;
+    }
+    const slugError = validateSlug(nextSlug, current, new Set([currentSlug]));
+    if (slugError) {
+      setNotice(slugError);
+      return null;
+    }
+    if (parent && !current.some((page) => page.slug === parent)) {
+      setNotice("Välj en befintlig förälder.");
+      return null;
+    }
+    if (parent === currentSlug) {
+      setNotice("En sida kan inte vara förälder till sig själv.");
+      return null;
+    }
+
+    let nextPages = current.map((page) => {
+      if (page.slug !== currentSlug) return page;
+      const sameBlocks = JSON.stringify(draftBlocks) === JSON.stringify(page.blocks);
+      if (sameBlocks) {
+        return {
+          ...withoutPending(page),
+          title,
+          parentSlug: parent,
+          role: role || undefined,
+        };
+      }
+      return {
+        ...page,
+        title,
+        parentSlug: parent,
+        role: role || undefined,
+        pending: structuredClone(draftBlocks),
+      };
+    });
+    let nextMenu = menuRef.current;
+    if (nextSlug !== currentSlug) {
+      const rewritten = retargetPageSlug(nextPages, nextMenu, currentSlug, nextSlug);
+      if (rewritten.error || !rewritten.pages || !rewritten.menu) {
+        setNotice(rewritten.error ?? "Kunde inte ändra adressen.");
+        return null;
+      }
+      nextPages = rewritten.pages;
+      nextMenu = rewritten.menu;
+    }
+
+    pagesRef.current = syncAllArticleNews(nextPages);
+    setPages(pagesRef.current);
+    if (nextMenu !== menuRef.current) {
+      menuRef.current = nextMenu;
+      setMenu(nextMenu);
+    }
+    const saved = pagesRef.current.find((page) => page.slug === nextSlug);
+    if (saved) {
+      setDraftBlocks(structuredClone(pageDraft(saved).blocks));
+    }
+    draftKey.current = `${nextSlug}:edit`;
+    setStructureSlug(nextSlug);
+    setSelectedSlug(nextSlug);
+    setLastSavedSlug(nextSlug);
+    setTitleInput(title);
+    setParentSlug(parent ?? "");
+    setCreateRole(role);
+    if (await saveNow()) return null;
+    return nextSlug;
+  }
+
+  async function publishEditedPage() {
+    const slug = await saveExistingPage();
+    if (slug === null) return;
+    await publishPendingChanges(slug);
+    const saved = pagesRef.current.find((page) => page.slug === slug);
+    if (saved) {
+      setDraftBlocks(structuredClone(pageDraft(saved).blocks));
+      draftKey.current = `${slug}:edit`;
+    }
+  }
+
+  async function discardEditedPage() {
+    if (structureSlug === null) return;
+    await discardPendingChanges(structureSlug);
+    const saved = pagesRef.current.find((page) => page.slug === structureSlug);
+    if (!saved) return;
+    setTitleInput(saved.title);
+    setParentSlug(saved.parentSlug ?? "");
+    setCreateRole(saved.role ?? "");
+    setDraftBlocks(structuredClone(saved.blocks));
+    draftKey.current = `${saved.slug}:edit`;
+  }
+
   async function createPage(event: FormEvent) {
     event.preventDefault();
+    if (panel === "create" && structureSlug !== null) {
+      await saveExistingPage();
+      return;
+    }
     const title = titleInput.trim();
     const role = panel === "news" ? "" : createRole;
     const parent = panel === "news" || role === "home" ? undefined : parentSlug || undefined;
@@ -1096,16 +1248,8 @@ export default function AdminPage() {
   }
 
   function openStructure(slug: string) {
-    setStructureSlug(slug);
-    setSelectedSlug(slug);
     setPanel("create");
-    setNotice(null);
-  }
-
-  function closeStructure() {
-    setStructureSlug(null);
-    setPanel("pages");
-    setNotice(null);
+    loadExistingPage(slug);
   }
 
   function openNewsPanel() {
@@ -1147,13 +1291,20 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
-    if (phase !== "ready" || panel !== "create" || templateSlug === null) return;
+    if (phase !== "ready" || panel !== "create") return;
+    if (structureSlug !== null) {
+      const key = `${structureSlug}:edit`;
+      if (draftKey.current === key) return;
+      loadExistingPage(structureSlug);
+      return;
+    }
+    if (templateSlug === null) return;
     const key = `${templateSlug}:new`;
     if (draftKey.current === key) return;
     loadPageDraft(templateSlug);
-    // Hydrates the selected template once, so the draft stays on this screen.
+    // Hydrates the selected template or page once, so the draft stays on this screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, panel, templateSlug]);
+  }, [phase, panel, templateSlug, structureSlug]);
 
   if (phase !== "ready") {
     return (
@@ -1333,7 +1484,7 @@ export default function AdminPage() {
                       ) : (
                         <PageBlockList
                           blocks={selectedDraft.blocks}
-                          mode="content"
+                          mode="full"
                           issues={selectedIssues}
                           pages={pages}
                           parents={rootPages(pages).filter(
@@ -1343,6 +1494,8 @@ export default function AdminPage() {
                           onChange={(id, patch) => updateBlock(id, patch)}
                           onImage={(id, src, field) => updateBlock(id, { [field]: src })}
                           onItems={(id, items) => updateBlock(id, { items })}
+                          onMove={moveBlock}
+                          onRemove={removeBlock}
                         />
                       )}
                       <LockedFooterNote />
@@ -1368,7 +1521,7 @@ export default function AdminPage() {
                   <p className="admin-empty">Inga sidor.</p>
                 )}
 
-                {selectedDraft ? (
+                {selected && selectedDraft ? (
                   <PageMiniature
                     url={pageAddress(selected.slug)}
                     page={selectedDraft}
@@ -1385,145 +1538,133 @@ export default function AdminPage() {
             <div className="admin-panel">
               <PageHeading
                 kicker={
-                  panel === "create" && structurePage
-                    ? "Uppbyggnad"
-                    : panel === "news" && newsArticle
-                      ? "Redigera"
-                      : panel === "news"
-                        ? "Nyhet"
+                  panel === "news" && newsArticle
+                    ? "Redigera"
+                    : panel === "news"
+                      ? "Nyhet"
+                      : structurePage
+                        ? "Redigera"
                         : "Ny sida"
                 }
                 title={
-                  panel === "create" && structurePage
-                    ? pageTitle(structurePage)
-                    : panel === "news" && newsArticle
-                      ? articleLabel(newsDraft ?? newsArticle)
-                      : panel === "news"
-                        ? "Lägg till nyhet"
-                        : "Skapa ny sida av mall"
+                  panel === "news" && newsArticle
+                    ? articleLabel(newsDraft ?? newsArticle)
+                    : panel === "news"
+                      ? "Lägg till nyhet"
+                      : "Skapa eller redigera sida"
                 }
               />
-              {panel === "create" && structurePage ? (
-                <div className="admin-pages-layout is-create">
-                  <section aria-label="Sidans delar">
-                    <div className="admin-on-page">
-                      <h3>På {pageTitle(structurePage)}</h3>
-                      {!structureDraft || structureDraft.blocks.length === 0 ? (
-                        <p className="admin-empty">Inga komponenter ännu.</p>
-                      ) : (
-                        <ol>
-                          {structureDraft.blocks.map((block) => (
-                            <li key={block.id}>
-                              <strong>{blockLabel(block.type)}</strong>
-                              <span>{block.heading}</span>
-                            </li>
-                          ))}
-                        </ol>
-                      )}
-                      <LockedFooterNote />
-                    </div>
-                  </section>
-
-                  <section aria-label="Uppbyggnad">
-                    <div className="admin-main-head">
-                      <div>
-                        <p className="admin-kicker">Uppbyggnad</p>
-                        <h2 className="admin-title">{pageTitle(structurePage)}</h2>
-                        <p className="admin-preview">{pageAddress(structurePage.slug)}</p>
-                      </div>
-                      <div className="admin-main-actions">
-                        <div className="admin-action-row">
-                          <button type="button" className="admin-quiet" onClick={closeStructure}>
-                            Publicerade sidor
-                          </button>
-                          <a
-                            className={structureChanged ? "admin-quiet" : "admin-primary"}
-                            href={`/${structurePage.slug}`}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            Öppna sida
-                          </a>
-                          <PublishControls
-                            published={structurePage.published}
-                            changed={structureChanged}
-                            onToggle={() => togglePublished(structurePage.slug)}
-                            onPublish={() => void publishPendingChanges(structurePage.slug)}
-                            onDiscard={() => void discardPendingChanges(structurePage.slug)}
-                          />
+              <div className="admin-pages-layout is-create">
+                  <section aria-label={panel === "news" ? "Nyheter" : "Sidmallar"}>
+                    {panel === "create" ? (
+                      <div className="admin-create-choices">
+                        <div className="admin-create-choice">
+                          <strong>Skapa ny sida</strong>
+                          <label className="admin-pick" htmlFor="create-template">
+                            Mall
+                            <select
+                              id="create-template"
+                              value={
+                                structurePage ||
+                                templateSlug === null ||
+                                isBuiltinMenuTemplate(templateSlug)
+                                  ? UNSELECTED_TEMPLATE
+                                  : slugToOption(templateSlug)
+                              }
+                              onChange={(event) => {
+                                const slug = event.target.value;
+                                if (slug === UNSELECTED_TEMPLATE) return;
+                                chooseTemplate(optionToSlug(slug));
+                              }}
+                            >
+                              <option value={UNSELECTED_TEMPLATE} disabled>
+                                Välj mall
+                              </option>
+                              {visibleTemplateOptions.map((page) => (
+                                <option key={page.slug || "/"} value={slugToOption(page.slug)}>
+                                  {page.parentSlug && !isBuiltinNewsTemplate(page.slug)
+                                    ? `– ${pageTitle(page)}`
+                                    : pageTitle(page)}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        </div>
+                        <div className="admin-create-choice">
+                          <strong>Redigera sida</strong>
+                          <label className="admin-pick" htmlFor="edit-page">
+                            Sida
+                            <select
+                              id="edit-page"
+                              value={
+                                menuSelected
+                                  ? slugToOption(MENU_TEMPLATE_SLUG)
+                                  : structureSlug === null
+                                    ? UNSELECTED_PAGE
+                                    : slugToOption(structureSlug)
+                              }
+                              onChange={(event) => {
+                                const slug = event.target.value;
+                                if (slug === UNSELECTED_PAGE) return;
+                                chooseEditPage(optionToSlug(slug));
+                              }}
+                            >
+                              <option value={UNSELECTED_PAGE} disabled>
+                                Välj sida
+                              </option>
+                              <option value={slugToOption(MENU_TEMPLATE_SLUG)}>Meny</option>
+                              {listedPages.map((page) => (
+                                <option key={page.slug || "/"} value={slugToOption(page.slug)}>
+                                  {page.parentSlug ? `– ${pageTitle(page)}` : pageTitle(page)}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
                         </div>
                       </div>
-                    </div>
-
-                    <PendingBanner show={structureChanged} />
-                    <CompletenessBanner
-                      issues={structureIssues}
-                      published={structurePage.published}
-                    />
-
-                    <section className="admin-canvas" aria-label="Sidans block">
-                      <h3>Sidan</h3>
-                      {!structureDraft || structureDraft.blocks.length === 0 ? (
-                        <p className="admin-empty">
-                          Inga komponenter ännu. Lägg till ett block under Skapa ny sidmall utifrån
-                          komponenter.
-                        </p>
-                      ) : (
-                        <PageBlockList
-                          blocks={structureDraft.blocks}
-                          mode="structure"
-                          issues={structureIssues}
-                          pages={pages}
-                          parents={rootPages(pages).filter(
-                            (page) => page.slug && page.slug !== structurePage.slug,
-                          )}
-                          pageParentSlug={structurePage.parentSlug ?? ""}
-                          onChange={(id, patch) => updateBlock(id, patch)}
-                          onImage={(id, src, field) => updateBlock(id, { [field]: src })}
-                          onItems={(id, items) => updateBlock(id, { items })}
-                          onMove={moveBlock}
-                          onRemove={removeBlock}
-                        />
-                      )}
-                      <LockedFooterNote />
-                    </section>
-                  </section>
-
-                  <PageMiniature
-                    url={pageAddress(structurePage.slug)}
-                    page={structureDraft ?? structurePage}
-                    menu={menu}
-                    publishedAt={newsDateForSlug(structurePage.slug, pages)}
-                    articleItems={articleItems}
-                  />
-                </div>
-              ) : (
-                <div className="admin-pages-layout is-create">
-                  <section aria-label={panel === "news" ? "Nyheter" : "Sidmallar"}>
-                    <label className="admin-pick" htmlFor="create-template">
-                      Mall
-                      <select
-                        id="create-template"
-                        value={templateSlug === null ? UNSELECTED_TEMPLATE : slugToOption(templateSlug)}
-                        onChange={(event) => {
-                          const slug = event.target.value;
-                          if (slug === UNSELECTED_TEMPLATE) return;
-                          chooseTemplate(optionToSlug(slug));
-                        }}
-                      >
-                        <option value={UNSELECTED_TEMPLATE} disabled>
-                          Välj mall
-                        </option>
-                        {visibleTemplateOptions.map((page) => (
-                          <option key={page.slug || "/"} value={slugToOption(page.slug)}>
-                            {page.parentSlug && !isBuiltinNewsTemplate(page.slug)
-                              ? `– ${pageTitle(page)}`
-                              : pageTitle(page)}
+                    ) : (
+                      <label className="admin-pick" htmlFor="create-template">
+                        Mall
+                        <select
+                          id="create-template"
+                          value={templateSlug === null ? UNSELECTED_TEMPLATE : slugToOption(templateSlug)}
+                          onChange={(event) => {
+                            const slug = event.target.value;
+                            if (slug === UNSELECTED_TEMPLATE) return;
+                            chooseTemplate(optionToSlug(slug));
+                          }}
+                        >
+                          <option value={UNSELECTED_TEMPLATE} disabled>
+                            Välj mall
                           </option>
-                        ))}
-                      </select>
-                    </label>
-                    {menuSelected ? (
+                          {visibleTemplateOptions.map((page) => (
+                            <option key={page.slug || "/"} value={slugToOption(page.slug)}>
+                              {page.parentSlug && !isBuiltinNewsTemplate(page.slug)
+                                ? `– ${pageTitle(page)}`
+                                : pageTitle(page)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
+                    {panel === "create" && structurePage ? (
+                      <div className="admin-on-page">
+                        <h3>På {pageTitle(structurePage)}</h3>
+                        {draftBlocks.length === 0 ? (
+                          <p className="admin-empty">Inga komponenter ännu.</p>
+                        ) : (
+                          <ol>
+                            {draftBlocks.map((block) => (
+                              <li key={block.id}>
+                                <strong>{blockLabel(block.type)}</strong>
+                                <span>{block.heading}</span>
+                              </li>
+                            ))}
+                          </ol>
+                        )}
+                        <LockedFooterNote />
+                      </div>
+                    ) : menuSelected ? (
                       <div className="admin-on-page">
                         <h3>På Meny</h3>
                         {menu.length === 0 ? (
@@ -1559,6 +1700,7 @@ export default function AdminPage() {
                     ) : null}
                     {templatePage &&
                     panel !== "news" &&
+                    !structurePage &&
                     !isBuiltinNewsTemplate(templatePage.slug) &&
                     !isBuiltinMenuTemplate(templatePage.slug) ? (
                       <section className="admin-danger" aria-label="Ta bort mall">
@@ -1661,32 +1803,60 @@ export default function AdminPage() {
                         <MenuRows items={menu} pages={orderedPages(pages)} onChange={updateMenu} />
                       </section>
                     </section>
-                  ) : templatePage ? (
-                    <section aria-label={panel === "news" ? "Ny nyhet" : "Ny sida"}>
+                  ) : structurePage || templatePage ? (
+                    <section
+                      aria-label={
+                        panel === "news" ? "Ny nyhet" : structurePage ? "Redigera sida" : "Ny sida"
+                      }
+                    >
                       <form onSubmit={createPage}>
                         <div className="admin-main-head">
                           <div>
-                            <p className="admin-kicker">{panel === "news" ? "Ny nyhet" : "Ny sida"}</p>
+                            <p className="admin-kicker">
+                              {panel === "news"
+                                ? "Ny nyhet"
+                                : structurePage
+                                  ? "Redigera sida"
+                                  : "Ny sida"}
+                            </p>
                             <h2 className="admin-title">{editorTitle}</h2>
                             <p className="admin-preview">{pageAddress(previewSlug)}</p>
                           </div>
                           <div className="admin-main-actions">
                             <div className="admin-action-row">
-                              <label className="admin-check">
-                                <input
-                                  type="checkbox"
-                                  checked={published}
-                                  onChange={(event) => setPublished(event.target.checked)}
+                              {structurePage ? (
+                                <PublishControls
+                                  published={structurePage.published}
+                                  changed={structureChanged}
+                                  onToggle={() => togglePublished(structurePage.slug)}
+                                  onPublish={() => void publishEditedPage()}
+                                  onDiscard={() => void discardEditedPage()}
                                 />
-                                Publicera
-                              </label>
+                              ) : (
+                                <label className="admin-check">
+                                  <input
+                                    type="checkbox"
+                                    checked={published}
+                                    onChange={(event) => setPublished(event.target.checked)}
+                                  />
+                                  Publicera
+                                </label>
+                              )}
                               <button type="submit" className="admin-primary">
-                                {panel === "news" ? "Spara nyhet" : "Spara sida"}
+                                {panel === "news"
+                                  ? "Spara nyhet"
+                                  : structurePage
+                                    ? "Spara sida"
+                                    : "Skapa ny sida"}
                               </button>
-                              {lastSavedSlug !== null ? (
+                              {structurePage || lastSavedSlug !== null ? (
                                 <a
                                   className="admin-quiet"
-                                  href={lastSavedSlug ? `/${lastSavedSlug}` : "/"}
+                                  href={
+                                    (structurePage ? structurePage.slug : lastSavedSlug)
+                                      ? `/${structurePage ? structurePage.slug : lastSavedSlug}`
+                                      : "/"
+                                  }
                                   target="_blank"
                                   rel="noreferrer"
                                 >
@@ -1697,7 +1867,11 @@ export default function AdminPage() {
                           </div>
                         </div>
 
-                        <CompletenessBanner issues={createIssues} />
+                        {structurePage ? <PendingBanner show={structureChanged} /> : null}
+                        <CompletenessBanner
+                          issues={createIssues}
+                          published={structurePage?.published}
+                        />
 
                         <div className="admin-create-fields">
                           <AdminField
@@ -1727,7 +1901,7 @@ export default function AdminPage() {
                                 onChange={(event) => setParentSlug(event.target.value)}
                               >
                                 <option value="">Ingen</option>
-                                {parents.map((page) => (
+                                {formParents.map((page) => (
                                   <option key={page.slug || "/"} value={page.slug}>
                                     {pageTitle(page)}
                                   </option>
@@ -1749,13 +1923,19 @@ export default function AdminPage() {
                         <section className="admin-canvas" aria-label="Sidans block">
                           <h3>Sidan</h3>
                           {draftBlocks.length === 0 ? (
-                            <p className="admin-empty">Mallen har inga komponenter ännu.</p>
+                            <p className="admin-empty">
+                              {structurePage
+                                ? "Inga komponenter ännu."
+                                : "Mallen har inga komponenter ännu."}
+                            </p>
                           ) : (
                             <PageBlockList
                               blocks={draftBlocks}
                               mode="full"
                               issues={createIssues}
                               pages={pages}
+                              parents={formParents}
+                              pageParentSlug={createRole === "home" ? "" : parentSlug}
                               onChange={(id, patch) => updateDraftBlock(id, patch)}
                               onImage={(id, src, field) => updateDraftBlock(id, { [field]: src })}
                               onItems={(id, items) => updateDraftBlock(id, { items })}
@@ -1769,7 +1949,11 @@ export default function AdminPage() {
                     </section>
                   ) : (
                     <section aria-label={panel === "news" ? "Ny nyhet" : "Ny sida"}>
-                      <p className="admin-empty">Välj en sidmall till vänster.</p>
+                      <p className="admin-empty">
+                        {panel === "news"
+                          ? "Välj en sidmall till vänster."
+                          : "Välj en sidmall eller en sida till vänster."}
+                      </p>
                     </section>
                   )}
 
@@ -1802,14 +1986,13 @@ export default function AdminPage() {
                             ? undefined
                             : parentSlug || undefined,
                         role: panel === "create" ? createRole || undefined : undefined,
-                        published,
-                        links: [],
-                        blocks: templatePage ? draftBlocks : [],
+                        published: structurePage?.published ?? published,
+                        links: structurePage?.links ?? [],
+                        blocks: structurePage || templatePage ? draftBlocks : [],
                       }}
                     />
                   )}
                 </div>
-              )}
             </div>
           ) : null}
 

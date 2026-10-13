@@ -159,6 +159,18 @@ function BlockView({
     );
   }
 
+  if (block.type === "image") {
+    return (
+      <section className="cms-image">
+        {block.image ? (
+          <img src={block.image} alt="" />
+        ) : (
+          <div className="cms-image-fallback" />
+        )}
+      </section>
+    );
+  }
+
   if (block.type === "textColumn") {
     return (
       <section className="cms-text-column">

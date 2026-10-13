@@ -50,6 +50,11 @@ export const library: {
     description: "Rubriker och stycken",
   },
   {
+    type: "image",
+    label: "Bild",
+    description: "Bara en bild",
+  },
+  {
     type: "imageText",
     label: "Bild och text",
     description: "Ett foto, rubrik och text",
@@ -138,6 +143,11 @@ const defaults: Record<BlockType, Omit<CmsBlock, "id" | "type">> = {
   textColumn: {
     heading: "",
     body: "",
+  },
+  image: {
+    heading: "",
+    body: "",
+    image: "",
   },
   banner: {
     heading: "Morning seminar",
@@ -687,6 +697,7 @@ export function blockHasImage(type: BlockType): boolean {
   return (
     type === "hero" ||
     type === "banner" ||
+    type === "image" ||
     type === "imageText" ||
     type === "contact" ||
     type === "imagePair" ||
@@ -803,6 +814,10 @@ export function fieldsFor(type: BlockType): BlockFields {
 
   if (type === "pageHeader" || type === "textColumn") {
     return { ...none, heading: null, body: null };
+  }
+
+  if (type === "image") {
+    return { ...none, heading: null, body: null, image: true };
   }
 
   if (type === "article") {
