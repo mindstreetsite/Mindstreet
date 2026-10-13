@@ -416,6 +416,12 @@
   overflow: visible;
 }
 
+.admin-pages-layout .admin-on-page span.admin-switch-thumb {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+
 .admin-add-component {
   width: 100%;
   margin-top: 12px;
@@ -504,59 +510,44 @@
   line-height: 1.4;
 }
 
-.admin-switch-ui {
-  position: relative;
+.admin-switch-control {
+  display: inline-flex;
   flex: 0 0 auto;
-  width: 44px;
-  height: 26px;
-}
-
-.admin-switch-ui input {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
+  align-items: center;
   width: 44px;
   height: 26px;
   margin: 0;
-  padding: 0;
-  cursor: pointer;
-  opacity: 0;
-}
-
-.admin-switch-track {
-  display: block;
-  width: 44px;
-  height: 26px;
+  padding: 2px;
   border: 1px solid var(--border);
   border-radius: 999px;
   background: color-mix(in srgb, var(--navy) 18%, var(--paper));
+  cursor: pointer;
+  appearance: none;
 }
 
-.admin-switch-track::after {
-  content: "";
-  position: absolute;
-  top: 3px;
-  left: 3px;
+.admin-switch-control[data-state="checked"] {
+  border-color: var(--navy);
+  background: var(--navy);
+}
+
+.admin-switch-control:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 2px;
+}
+
+.admin-switch-thumb {
+  display: block;
   width: 20px;
   height: 20px;
   border-radius: 50%;
   background: var(--paper);
   box-shadow: 0 1px 2px color-mix(in srgb, var(--navy) 25%, transparent);
   transition: transform 0.15s ease;
+  transform: translateX(0);
 }
 
-.admin-switch-ui input:checked + .admin-switch-track {
-  border-color: var(--navy);
-  background: var(--navy);
-}
-
-.admin-switch-ui input:checked + .admin-switch-track::after {
+.admin-switch-control[data-state="checked"] .admin-switch-thumb {
   transform: translateX(18px);
-}
-
-.admin-switch-ui input:focus-visible + .admin-switch-track {
-  outline: 2px solid var(--navy);
-  outline-offset: 2px;
 }
 
 .admin-create-fields select:disabled {
@@ -1931,7 +1922,7 @@ span.admin-publish {
   flex: 0 0 auto;
 }
 
-.admin-inline-switch {
+label.admin-inline-switch {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1939,7 +1930,7 @@ span.admin-publish {
   font-size: 14px;
 }
 
-.admin-inline-switch.is-stacked {
+label.admin-inline-switch.is-stacked {
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;

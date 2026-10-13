@@ -29,6 +29,7 @@ import {
   type CompletenessIssue,
 } from "@/lib/cms/completeness";
 import { formatNewsDate, newsDateForSlug } from "@/lib/cms/news-date";
+import { Switch } from "@/components/admin/switch";
 import { LockedFooterNote } from "@/components/cms/locked-footer";
 import { PageBlocks } from "@/components/cms/page-blocks";
 import { Header } from "@/components/header";
@@ -347,15 +348,7 @@ function RoleSwitch({
         <strong>{label}</strong>
         <small>{description}</small>
       </span>
-      <span className="admin-switch-ui">
-        <input
-          type="checkbox"
-          role="switch"
-          checked={checked}
-          onChange={(event) => onChange(event.target.checked)}
-        />
-        <span className="admin-switch-track" aria-hidden="true" />
-      </span>
+      <Switch checked={checked} onChange={onChange} />
     </label>
   );
 }
@@ -374,15 +367,7 @@ function FieldSwitch({
   return (
     <label className={stacked ? "admin-inline-switch is-stacked" : "admin-inline-switch"}>
       <span>{label}</span>
-      <span className="admin-switch-ui">
-        <input
-          type="checkbox"
-          role="switch"
-          checked={checked}
-          onChange={(event) => onChange(event.target.checked)}
-        />
-        <span className="admin-switch-track" aria-hidden="true" />
-      </span>
+      <Switch checked={checked} onChange={onChange} />
     </label>
   );
 }
