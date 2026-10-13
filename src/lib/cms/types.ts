@@ -2,7 +2,6 @@ export type BlockType =
   | "hero"
   | "text"
   | "textColumn"
-  | "split"
   | "banner"
   | "imageText"
   | "contact"
@@ -10,18 +9,18 @@ export type BlockType =
   | "contactUs"
   | "imagePair"
   | "sectionHeader"
-  | "highlight"
-  | "lead"
   | "article"
   | "expertise"
   | "offering"
   | "news"
   | "newsTwelve"
+  | "articleList"
   | "statement"
   | "pageHeader";
 
 export type ImageSide = "left" | "right";
 export type BlockAlign = "left" | "center" | "right";
+export type BlockSize = "large" | "small";
 export type BlockTheme =
   | "sand"
   | "mist"
@@ -80,6 +79,7 @@ export type CmsBlock = {
   contactLinkedIn?: string;
   imageSide?: ImageSide;
   align?: BlockAlign;
+  size?: BlockSize;
   theme?: BlockTheme;
   shape?: boolean;
   parentSlug?: string;
@@ -92,11 +92,15 @@ export type CmsLink = {
   children?: { label: string; href: string }[];
 };
 
+export type PageRole = "home" | "news";
+
 export type CmsPage = {
   slug: string;
   title: string;
   parentSlug?: string;
+  role?: PageRole;
   published: boolean;
   links: CmsLink[];
   blocks: CmsBlock[];
+  pending?: CmsBlock[];
 };

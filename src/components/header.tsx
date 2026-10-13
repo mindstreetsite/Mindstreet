@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { menuItems } from "@/content/home";
 
@@ -12,8 +12,13 @@ export function Header({
   items?: { label: string; href: string; children?: { label: string; href: string }[] }[];
 }) {
   const headerRef = useRef<HTMLElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
+  const [rendered, setRendered] = useState(false);
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const openedRef = useRef(false);
+  const openFrameRef = useRef(0);
   const bar = variant === "bar";
   const configured = (items ?? [])
     .map((item) => ({
@@ -29,33 +34,81 @@ export function Header({
       ? configured
       : menuItems.map((item) => ({ label: item.label, href: item.href, children: [] }));
 
+  function openMenu() {
+    setRendered(true);
+    cancelAnimationFrame(openFrameRef.current);
+    openFrameRef.current = requestAnimationFrame(() => {
+      openFrameRef.current = requestAnimationFrame(() => setOpen(true));
+    });
+  }
+
   function closeMenu() {
+    cancelAnimationFrame(openFrameRef.current);
     setOpen(false);
     setOpenIndex(null);
+    menuButtonRef.current?.focus({ preventScroll: true });
   }
 
   useEffect(() => {
-    if (!open) return;
+    if (open) openedRef.current = true;
+  }, [open]);
+
+  useEffect(() => {
+    if (open || !rendered || !openedRef.current) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const timeout = window.setTimeout(() => {
+      openedRef.current = false;
+      setRendered(false);
+    }, reduce ? 0 : 520);
+    return () => window.clearTimeout(timeout);
+  }, [open, rendered]);
+
+  useLayoutEffect(() => {
+    if (!rendered) return;
+
+    const gap = window.innerWidth - document.documentElement.clientWidth;
+    const scrollY = window.scrollY;
+    const previousPadding = document.body.style.paddingRight;
+    if (gap > 0) document.body.style.paddingRight = `${gap}px`;
+    document.body.style.overflow = "hidden";
+    if (window.scrollY !== scrollY) {
+      window.scrollTo({ top: scrollY, left: window.scrollX, behavior: "instant" });
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+      document.body.style.paddingRight = previousPadding;
+    };
+  }, [rendered]);
+
+  useEffect(() => {
+    if (!rendered) return;
 
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") closeMenu();
     };
 
     document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
+    return () => document.removeEventListener("keydown", onKey);
+  }, [rendered]);
 
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
+  useEffect(() => {
+    if (!open) return;
+    closeButtonRef.current?.focus({ preventScroll: true });
   }, [open]);
 
-  const hero = !bar && open ? headerRef.current?.closest(".hero") : null;
-  const menuLayer = open ? (
-    <div className="menu-layer">
+  const hero = !bar && rendered ? headerRef.current?.closest(".hero") : null;
+  const menuLayer = rendered ? (
+    <div className={open ? "menu-layer is-open" : "menu-layer"}>
       <button type="button" className="menu-backdrop" aria-label="Stäng meny" onClick={closeMenu} />
-      <nav className="menu-panel" aria-label="Huvudmeny">
-        <button type="button" className="menu-close" aria-label="Stäng meny" onClick={closeMenu}>
+      <nav className="menu-panel" aria-label="Huvudmeny" aria-hidden={!open} inert={!open}>
+        <button
+          ref={closeButtonRef}
+          type="button"
+          className="menu-close"
+          aria-label="Stäng meny"
+          onClick={closeMenu}
+        >
           <span />
           <span />
         </button>
@@ -120,10 +173,11 @@ export function Header({
         </a>
         <button
           type="button"
+          ref={menuButtonRef}
           className="menu-button"
           aria-label="Öppna meny"
           aria-expanded={open}
-          onClick={() => setOpen(true)}
+          onClick={openMenu}
         >
           <img
             src={bar ? "/icons/menu-gray.svg" : "/icons/menu.svg"}

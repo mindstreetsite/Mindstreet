@@ -5,7 +5,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { renderInline } from "@/lib/cms/inline";
 import { articleParagraphs, quoteAfterIndex, resolveTheme } from "@/lib/cms/library";
 import { formatNewsDate } from "@/lib/cms/news-date";
-import type { CmsBlock, CmsLink, CmsPage } from "@/lib/cms/types";
+import type { CmsBlock, CmsCard, CmsLink, CmsPage } from "@/lib/cms/types";
 import type { ReactNode } from "react";
 import "./page-blocks.css";
 
@@ -14,17 +14,30 @@ export function PageBlocks({
   menu,
   preview = false,
   publishedAt = "",
+  articleItems = [],
 }: {
   page: CmsPage;
   menu?: CmsLink[];
   preview?: boolean;
   publishedAt?: string;
+  articleItems?: CmsCard[];
 }) {
   const firstIsHero = page.blocks[0]?.type === "hero";
   const hasPageHeader = page.blocks.some(
     (block) => block.type === "pageHeader" || block.type === "contactUs",
   );
   const parentHref = page.parentSlug ? `/${page.parentSlug}` : "/";
+  const listsNews =
+    page.role === "news" &&
+    !page.blocks.some(
+      (block) =>
+        block.type === "articleList" || block.type === "news" || block.type === "newsTwelve",
+    );
+  const newsFeed = listsNews
+    ? preview
+      ? articleItems
+      : articleItems.filter((item) => item.published !== false)
+    : [];
 
   return (
     <div id="top">
@@ -44,8 +57,12 @@ export function PageBlocks({
           preview={preview}
           parentHref={parentHref}
           publishedAt={publishedAt}
+          articleItems={articleItems}
         />
       ))}
+      {newsFeed.length > 0 ? (
+        <NewsBlock heading="Nyheter och artiklar" items={newsFeed} preview={preview} pageSize={12} />
+      ) : null}
       {page.links.length > 0 ? (
         <nav className="cms-page-links" aria-label="Länkar">
           <ul>
@@ -74,6 +91,7 @@ function BlockView({
   preview,
   parentHref,
   publishedAt,
+  articleItems,
 }: {
   block: CmsBlock;
   menu?: CmsLink[];
@@ -81,6 +99,7 @@ function BlockView({
   preview: boolean;
   parentHref: string;
   publishedAt: string;
+  articleItems: CmsCard[];
 }) {
   if (block.type === "pageHeader") {
     return <Header variant="bar" items={menu} />;
@@ -123,11 +142,18 @@ function BlockView({
   }
 
   if (block.type === "text") {
+    const paragraphs = articleParagraphs(block.body);
     return (
       <ThemedSurface block={block}>
         <div className="intro">
           <h2>{block.heading}</h2>
-          <p>{block.body}</p>
+          {paragraphs.length > 0 ? (
+            <div>
+              {paragraphs.map((paragraph, index) => (
+                <p key={index}>{paragraph}</p>
+              ))}
+            </div>
+          ) : null}
         </div>
       </ThemedSurface>
     );
@@ -152,30 +178,11 @@ function BlockView({
     );
   }
 
-  if (block.type === "split") {
-    const theme = resolveTheme(block);
-    return (
-      <section className={`about cms-theme-${theme}`}>
-        {(block.shape ?? theme === "mist") ? <ModuleShape /> : null}
-        <div className="about-inner">
-          {block.image ? (
-            <img className="about-photo" src={block.image} alt="" />
-          ) : (
-            <div className="about-photo cms-photo-fallback" />
-          )}
-          <div className="about-copy">
-            <h2>{block.heading}</h2>
-            <p>{block.body}</p>
-          </div>
-        </div>
-      </section>
-    );
-  }
-
   if (block.type === "banner") {
+    const size = block.size === "small" ? "small" : "large";
     return (
       <section className="seminar-wrap">
-        <div className="seminar">
+        <div className={`seminar is-${size}`}>
           {block.image ? (
             <img src={block.image} alt="" />
           ) : (
@@ -185,6 +192,11 @@ function BlockView({
           <div className="seminar-copy">
             {block.body ? <p>{block.body}</p> : null}
             <h2>{block.heading}</h2>
+            {block.buttonLabel ? (
+              <a className="btn btn-cream" href={block.buttonHref || "#"}>
+                {block.buttonLabel}
+              </a>
+            ) : null}
           </div>
         </div>
       </section>
@@ -238,30 +250,6 @@ function BlockView({
     );
   }
 
-  if (block.type === "highlight") {
-    return (
-      <section className="seminar-wrap">
-        <div className="seminar">
-          {block.image ? (
-            <img src={block.image} alt="" />
-          ) : (
-            <div className="cms-banner-fallback" />
-          )}
-          <div className="seminar-shade" />
-          <div className="seminar-copy">
-            {block.body ? <p>{block.body}</p> : null}
-            <h2>{block.heading}</h2>
-            {block.buttonLabel ? (
-              <a className="btn btn-cream" href={block.buttonHref || "#"}>
-                {block.buttonLabel}
-              </a>
-            ) : null}
-          </div>
-        </div>
-      </section>
-    );
-  }
-
   if (block.type === "article") {
     const paragraphs = articleParagraphs(block.body);
     const quote = block.quote?.trim() ?? "";
@@ -299,24 +287,6 @@ function BlockView({
     );
   }
 
-  if (block.type === "lead") {
-    const paragraphs = articleParagraphs(block.body);
-    return (
-      <ThemedSurface block={block}>
-        <div className="intro">
-          <h2>{block.heading}</h2>
-          {paragraphs.length > 0 ? (
-            <div>
-              {paragraphs.map((paragraph, index) => (
-                <p key={index}>{paragraph}</p>
-              ))}
-            </div>
-          ) : null}
-        </div>
-      </ThemedSurface>
-    );
-  }
-
   if (block.type === "statement") {
     const align = block.align === "left" || block.align === "right" ? block.align : "center";
     const theme = resolveTheme(block);
@@ -347,6 +317,12 @@ function BlockView({
         preview={preview}
         pageSize={block.type === "newsTwelve" ? 12 : 4}
       />
+    );
+  }
+
+  if (block.type === "articleList") {
+    return (
+      <NewsBlock heading={block.heading} items={articleItems} preview={preview} pageSize={12} />
     );
   }
 

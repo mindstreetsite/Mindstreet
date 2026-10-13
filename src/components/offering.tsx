@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { OfferingPanel } from "@/components/cms/offering-block";
 import { offering } from "@/content/home";
 
 export function Offering() {
@@ -28,15 +29,15 @@ export function Offering() {
                     <span className="plus" aria-hidden="true" />
                   </button>
                 </h3>
-                {isOpen && item.body ? (
-                  <div className="offering-body" id={panelId}>
+                {item.body ? (
+                  <OfferingPanel open={isOpen} id={panelId}>
                     <p>{item.body}</p>
                     {item.cta ? (
                       <a className="btn offering-link" href={item.cta.href}>
                         {item.cta.label}
                       </a>
                     ) : null}
-                  </div>
+                  </OfferingPanel>
                 ) : null}
               </article>
             );

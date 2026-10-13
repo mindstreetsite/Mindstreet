@@ -1,6 +1,7 @@
 import { PageBlocks } from "@/components/cms/page-blocks";
 import { SiteFooter } from "@/components/site-footer";
 import { readCmsState } from "@/lib/cms/blob-store";
+import { articleNewsCards, resolvedMenu } from "@/lib/cms/library";
 import { newsDateForSlug } from "@/lib/cms/news-date";
 import { getPublishedPage } from "@/lib/cms/storage";
 
@@ -44,8 +45,9 @@ export async function CmsRoute({ slug }: { slug: string }) {
   return (
     <PageBlocks
       page={page}
-      menu={stored.state.menu}
+      menu={resolvedMenu(stored.state.menu)}
       publishedAt={newsDateForSlug(page.slug, stored.state.pages)}
+      articleItems={articleNewsCards(stored.state.pages)}
     />
   );
 }

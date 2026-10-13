@@ -1,4 +1,4 @@
-import { blockLabel, fieldsFor, isNewsBlock } from "@/lib/cms/library";
+import { blockLabel, fieldsFor, isArticlePage, isNewsBlock } from "@/lib/cms/library";
 import type { BlockType, CmsBlock, CmsCard, CmsPage } from "@/lib/cms/types";
 
 export type CompletenessField =
@@ -50,10 +50,11 @@ export function pageCompletenessIssues(
   }
 
   if (page.slug && page.slug !== page.parentSlug) {
+    const articlePage = isArticlePage(page);
     const parent = page.parentSlug
       ? pages.find((other) => other.slug === page.parentSlug)
       : undefined;
-    if (parent && !pageHasLinkTo(parent, page.slug)) {
+    if (parent && !articlePage && !pageHasLinkTo(parent, page.slug)) {
       issues.push({
         id: completenessFieldId({ field: "parentLink" }),
         field: "parentLink",
@@ -64,7 +65,7 @@ export function pageCompletenessIssues(
 
     for (const child of pages) {
       if (child.parentSlug !== page.slug) continue;
-      if (pageHasLinkTo(page, child.slug)) continue;
+      if (isArticlePage(child) || pageHasLinkTo(page, child.slug)) continue;
       issues.push({
         id: completenessFieldId({ field: "childLink", itemId: child.slug }),
         field: "childLink",
@@ -132,7 +133,6 @@ function blockCompletenessIssues(block: CmsBlock): CompletenessIssue[] {
   if (
     fields.body &&
     block.type !== "contactCards" &&
-    block.type !== "imageText" &&
     block.type !== "imagePair" &&
     block.type !== "hero" &&
     blank(block.body)
@@ -146,14 +146,17 @@ function blockCompletenessIssues(block: CmsBlock): CompletenessIssue[] {
     issues.push(blockIssue(block, "image2", "Välj andra bilden", "välj andra bilden"));
   }
 
+  const buttonOn =
+    block.type !== "statement" && block.type !== "imageText"
+      ? true
+      : block.buttonLabel !== undefined;
   const buttonRequired =
     fields.button &&
     block.type !== "contact" &&
     block.type !== "contactCards" &&
     block.type !== "contactUs" &&
-    block.type !== "imageText" &&
     block.type !== "imagePair" &&
-    (block.type !== "statement" || block.buttonLabel !== undefined);
+    buttonOn;
   if (buttonRequired) {
     if (blank(block.buttonLabel)) {
       issues.push(blockIssue(block, "buttonLabel", "Fyll i knapp", "fyll i knapp"));
@@ -166,6 +169,9 @@ function blockCompletenessIssues(block: CmsBlock): CompletenessIssue[] {
   if (fields.quote && block.quote !== undefined && blank(block.quote)) {
     issues.push(blockIssue(block, "quote", "Fyll i citat", "fyll i citat"));
   }
+  if (block.type === "article" && blank(block.publishedAt)) {
+    issues.push(blockIssue(block, "publishedAt", "Välj datum", "välj datum"));
+  }
 
   const items = block.items ?? [];
   if (block.type === "expertise") {
@@ -175,10 +181,6 @@ function blockCompletenessIssues(block: CmsBlock): CompletenessIssue[] {
   } else if (block.type === "offering") {
     items.forEach((item, index) => {
       issues.push(...cardIssues(block, item, index, ["heading", "body", "buttonLabel"]));
-    });
-  } else if (isNewsBlock(block.type)) {
-    items.forEach((item, index) => {
-      issues.push(...cardIssues(block, item, index, ["image", "publishedAt", "heading"]));
     });
   } else if (block.type === "textColumn") {
     items.forEach((item, index) => {

@@ -114,16 +114,16 @@ const moduleSurfaces: BlockTheme[] = [
   "blush",
 ];
 
+const imageTextSurfaces: BlockTheme[] = ["fog", "ice", "ink", "blush", "coral", "sage"];
+
 const textSurfaces: BlockTheme[] = ["white", "fog", "mist", "linen", "blush", "sand"];
 
 const statementSurfaces: BlockTheme[] = [...textSurfaces, "ink", "charcoal", "rust"];
 
 const themesByType: Partial<Record<BlockType, BlockTheme[]>> = {
-  imageText: moduleSurfaces,
+  imageText: imageTextSurfaces,
   contact: moduleSurfaces,
   imagePair: moduleSurfaces,
-  split: moduleSurfaces,
-  lead: textSurfaces,
   text: textSurfaces,
   contactUs: moduleSurfaces,
   article: textSurfaces,

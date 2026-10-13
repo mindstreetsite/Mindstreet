@@ -325,6 +325,24 @@ p {
   background: var(--menu);
   border-radius: 30px 0 0 30px;
   padding: 80px 64px;
+  transform: translate3d(100%, 0, 0);
+  transition: transform 0.52s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.menu-layer.is-open .menu-panel {
+  transform: translate3d(0, 0, 0);
+}
+
+.menu-panel > ul,
+.menu-close {
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.menu-layer.is-open .menu-panel > ul,
+.menu-layer.is-open .menu-close {
+  opacity: 1;
+  transition-delay: 0.1s;
 }
 
 .menu-panel ul {
@@ -410,6 +428,13 @@ p {
   border: 0;
   background: transparent;
   cursor: pointer;
+  appearance: none;
+}
+
+.menu-close:focus,
+.menu-close:focus-visible {
+  outline: none;
+  background: transparent;
 }
 
 .menu-close span {
@@ -534,7 +559,7 @@ p {
 .expertise-grid p {
   font-size: 20px;
   line-height: 35px;
-  max-width: 42ch;
+  max-width: 46ch;
 }
 
 .arrow {
@@ -598,6 +623,7 @@ p {
   width: 40px;
   height: 40px;
   flex-shrink: 0;
+  transition: transform 0.75s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .plus::before,
@@ -617,6 +643,12 @@ p {
 
 .is-open .plus {
   transform: rotate(45deg);
+}
+
+.offering-panel {
+  height: 0;
+  overflow: hidden;
+  transition: height 0.75s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .offering-body {
@@ -648,6 +680,16 @@ p {
 .offering-link:hover {
   background: #000;
   color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plus,
+  .offering-panel,
+  .menu-panel,
+  .menu-panel > ul,
+  .menu-close {
+    transition: none;
+  }
 }
 
 .about {
@@ -850,6 +892,10 @@ p {
   justify-content: center;
   text-align: center;
   color: var(--cream);
+}
+
+.seminar.is-small {
+  min-height: 320px;
 }
 
 .seminar img {

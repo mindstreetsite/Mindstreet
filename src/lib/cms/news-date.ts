@@ -40,5 +40,7 @@ export function newsDateForSlug(slug: string, pages: CmsPage[]): string {
     }
   }
 
-  return "";
+  const page = pages.find((item) => cmsPagePath(item.slug) === target);
+  const article = page?.blocks.find((block) => block.type === "article");
+  return article?.publishedAt?.trim() ?? "";
 }

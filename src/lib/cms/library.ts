@@ -1,4 +1,5 @@
-import type { BlockTheme, BlockType, CmsBlock, CmsCard, CmsPage } from "@/lib/cms/types";
+import { menuItems } from "@/content/home";
+import type { BlockTheme, BlockType, CmsBlock, CmsCard, CmsLink, CmsPage } from "@/lib/cms/types";
 
 export { swatchesFor, themesFor, surfaceById, type Surface } from "@/lib/design/palette";
 
@@ -9,12 +10,6 @@ const loremBody =
 
 const experienceHeading =
   "Vi har en bred och lång samlad erfarenhet från bank och finans";
-
-const leadHeading =
-  "Vi kan bank och finans. Erfarna, kompetenta konsulter som kliver in och får saker gjorda.";
-
-const leadBody =
-  "Våra konsulter kan AML. Vi driver program och projekt, gör gapanalyser och bemannar interimroller – men vi går också in hands-on som AML- och KYC-specialister, transaktionsmonitorerare och riskmodellerare. Vi stöttar dessutom i rekryteringsprocesser, rådgivning och utbildning.";
 
 export type BlockFields = {
   heading: string | null;
@@ -45,14 +40,9 @@ export const library: {
     description: "Helbild med rubrik",
   },
   {
-    type: "lead",
-    label: "Ingress",
-    description: "Stor rubrik och text",
-  },
-  {
     type: "text",
     label: "Text",
-    description: "Rubrik och stycke",
+    description: "Stor rubrik och text",
   },
   {
     type: "textColumn",
@@ -62,7 +52,7 @@ export const library: {
   {
     type: "imageText",
     label: "Bild och text",
-    description: "Ett foto, överrad och knapp",
+    description: "Ett foto, rubrik och text",
   },
   {
     type: "contact",
@@ -85,11 +75,6 @@ export const library: {
     description: "Två överlappande foton",
   },
   {
-    type: "split",
-    label: "Bild och text (startsida)",
-    description: "Den äldre split-layouten",
-  },
-  {
     type: "sectionHeader",
     label: "Sektionsrubrik",
     description: "Rubrik med linje",
@@ -97,11 +82,6 @@ export const library: {
   {
     type: "banner",
     label: "Banner",
-    description: "Bakgrundsbild och rubrik",
-  },
-  {
-    type: "highlight",
-    label: "Highlight",
     description: "Helbild med knapp",
   },
   {
@@ -130,6 +110,11 @@ export const library: {
     description: "Bild och rubrik, tolv i taget",
   },
   {
+    type: "articleList",
+    label: "Nyheter och artiklar",
+    description: "Publicerade nyheter, tolv i taget",
+  },
+  {
     type: "statement",
     label: "Text och knapp",
     description: "Text med valfri knapp",
@@ -154,23 +139,20 @@ const defaults: Record<BlockType, Omit<CmsBlock, "id" | "type">> = {
     heading: "",
     body: "",
   },
-  split: {
-    heading: "Lorem ipsum dolor",
-    body: loremBody,
-  },
   banner: {
-    heading: "Lorem ipsum",
-    body: "Lorem ipsum",
+    heading: "Morning seminar",
+    body: "Rådmansgatan 14",
+    buttonLabel: "Anmäl dig",
+    buttonHref: "/#kontakt",
+    image: "/images/seminar.jpg",
+    size: "large",
   },
   imageText: {
     heading: experienceHeading,
-    body: "",
-    eyebrow: "Om Mindstreet",
-    buttonLabel: "Läs mer",
-    buttonHref: "/#kontakt",
+    body: loremBody,
     imageSide: "right",
     image: "/images/about.jpg",
-    theme: "sand",
+    theme: "fog",
   },
   contact: {
     heading: experienceHeading,
@@ -215,18 +197,6 @@ const defaults: Record<BlockType, Omit<CmsBlock, "id" | "type">> = {
     align: "left",
     theme: "white",
   },
-  highlight: {
-    heading: "Morning seminar",
-    body: "Rådmansgatan 14",
-    buttonLabel: "Anmäl dig",
-    buttonHref: "/#kontakt",
-    image: "/images/seminar.jpg",
-  },
-  lead: {
-    heading: leadHeading,
-    body: leadBody,
-    theme: "white",
-  },
   article: {
     heading: "Lorem ipsum dolor sit amet",
     body: `${loremBody}\n\n${loremBody}`,
@@ -248,6 +218,10 @@ const defaults: Record<BlockType, Omit<CmsBlock, "id" | "type">> = {
   },
   newsTwelve: {
     heading: "Mindblowing news",
+    body: "",
+  },
+  articleList: {
+    heading: "Nyheter och artiklar",
     body: "",
   },
   statement: {
@@ -380,6 +354,80 @@ export function isNewsBlock(type: BlockType): boolean {
   return type === "news" || type === "newsTwelve";
 }
 
+export function isArticlePage(page: CmsPage): boolean {
+  return page.blocks.some((block) => block.type === "article");
+}
+
+export const NEWS_ARTICLE_TEMPLATE_SLUG = "__news-article__";
+export const NEWS_ARTICLE_QUOTE_TEMPLATE_SLUG = "__news-article-quote__";
+export const MENU_TEMPLATE_SLUG = "__menu__";
+
+export function isBuiltinNewsTemplate(slug: string): boolean {
+  return slug === NEWS_ARTICLE_TEMPLATE_SLUG || slug === NEWS_ARTICLE_QUOTE_TEMPLATE_SLUG;
+}
+
+export function isBuiltinMenuTemplate(slug: string): boolean {
+  return slug === MENU_TEMPLATE_SLUG;
+}
+
+export function defaultMenu(): CmsLink[] {
+  return menuItems.map((item) => ({ label: item.label, href: item.href }));
+}
+
+export function resolvedMenu(menu?: CmsLink[]): CmsLink[] {
+  if (menu?.some((item) => item.label.trim())) return menu;
+  return defaultMenu();
+}
+
+export function builtinMenuTemplate(): CmsPage {
+  return {
+    slug: MENU_TEMPLATE_SLUG,
+    title: "Meny",
+    published: false,
+    links: [],
+    blocks: [],
+  };
+}
+
+function builtinArticleBlock(withQuote: boolean): CmsBlock {
+  return {
+    id: withQuote ? "builtin-article-quote" : "builtin-article",
+    type: "article",
+    heading: "",
+    body: "",
+    image: "",
+    imageSide: "right",
+    theme: "white",
+    ...(withQuote ? { quote: "", quoteCredit: "", quoteAfter: 0 } : {}),
+  };
+}
+
+export function builtinNewsTemplates(): CmsPage[] {
+  return [
+    {
+      slug: NEWS_ARTICLE_TEMPLATE_SLUG,
+      title: "Artikel",
+      published: false,
+      links: [],
+      blocks: [builtinArticleBlock(false)],
+    },
+    {
+      slug: NEWS_ARTICLE_QUOTE_TEMPLATE_SLUG,
+      title: "Artikel med citat",
+      published: false,
+      links: [],
+      blocks: [builtinArticleBlock(true)],
+    },
+  ];
+}
+
+export function newsTemplateChoices(choices: CmsPage[]): CmsPage[] {
+  const saved = choices.filter(
+    (page) => isArticlePage(page) && !isBuiltinNewsTemplate(page.slug),
+  );
+  return [...builtinNewsTemplates(), ...saved];
+}
+
 export function newsCardFromArticle(block: CmsBlock, slug: string, published: boolean): CmsCard {
   return {
     id: crypto.randomUUID(),
@@ -396,52 +444,145 @@ function newsHref(value: string) {
   return value.trim().toLowerCase().replace(/^\/+/, "").replace(/\/+$/, "");
 }
 
-export function prependArticleNews(pages: CmsPage[], card: CmsCard): CmsPage[] {
-  const target = newsHref(card.href);
-  return pages.map((page) => {
-    if (!page.published || !page.blocks.some((block) => isNewsBlock(block.type))) return page;
-    let changed = false;
-    const blocks = page.blocks.map((block) => {
-      if (!isNewsBlock(block.type)) return block;
-      const items = block.items ?? [];
-      if (target && items.some((item) => newsHref(item.href) === target)) return block;
-      changed = true;
-      return { ...block, items: [{ ...card }, ...items] };
-    });
-    return changed ? { ...page, blocks } : page;
+function rewriteNewsBlocks(
+  blocks: CmsBlock[],
+  rewrite: (block: CmsBlock) => CmsBlock,
+): { blocks: CmsBlock[]; changed: boolean } {
+  let changed = false;
+  const next = blocks.map((block) => {
+    if (!isNewsBlock(block.type)) return block;
+    const rewritten = rewrite(block);
+    if (rewritten !== block) changed = true;
+    return rewritten;
   });
+  return { blocks: changed ? next : blocks, changed };
+}
+
+function rewritePageNews(page: CmsPage, rewrite: (block: CmsBlock) => CmsBlock): CmsPage {
+  const live = rewriteNewsBlocks(page.blocks, rewrite);
+  const pending = page.pending ? rewriteNewsBlocks(page.pending, rewrite) : null;
+  if (!live.changed && !pending?.changed) return page;
+  return {
+    ...page,
+    blocks: live.changed ? live.blocks : page.blocks,
+    pending: pending ? (pending.changed ? pending.blocks : page.pending) : page.pending,
+  };
+}
+
+export function prependArticleNews(pages: CmsPage[], card: CmsCard): CmsPage[] {
+  return upsertArticleNews(pages, card);
+}
+
+export function upsertArticleNews(pages: CmsPage[], card: CmsCard): CmsPage[] {
+  const target = newsHref(card.href);
+  if (!target) return pages;
+  let any = false;
+  const next = pages.map((page) => {
+    const updated = rewritePageNews(page, (block) => {
+      const items = block.items ?? [];
+      const index = items.findIndex((item) => newsHref(item.href) === target);
+      if (index === -1) {
+        return { ...block, items: [{ ...card }, ...items] };
+      }
+      const existing = items[index];
+      if (
+        existing.heading === card.heading &&
+        (existing.image ?? "") === (card.image ?? "") &&
+        (existing.publishedAt ?? "") === (card.publishedAt ?? "") &&
+        existing.published === card.published &&
+        newsHref(existing.href) === target
+      ) {
+        return block;
+      }
+      const nextItems = items.slice();
+      nextItems[index] = {
+        ...existing,
+        heading: card.heading,
+        image: card.image ?? "",
+        publishedAt: card.publishedAt ?? "",
+        published: card.published,
+        href: card.href,
+      };
+      return { ...block, items: nextItems };
+    });
+    if (updated === page) return page;
+    any = true;
+    return updated;
+  });
+  return any ? next : pages;
+}
+
+export function upsertArticleNewsForPage(pages: CmsPage[], page: CmsPage): CmsPage[] {
+  const article = page.blocks.find((block) => block.type === "article");
+  if (!article) return pages;
+  return upsertArticleNews(pages, newsCardFromArticle(article, page.slug, page.published));
+}
+
+export function syncAllArticleNews(pages: CmsPage[]): CmsPage[] {
+  return pages.reduce((next, page) => upsertArticleNewsForPage(next, page), pages);
+}
+
+export function removeArticleNews(pages: CmsPage[], slugs: string[]): CmsPage[] {
+  const targets = new Set(slugs.map(newsHref).filter(Boolean));
+  if (targets.size === 0) return pages;
+  let any = false;
+  const next = pages.map((page) => {
+    const updated = rewritePageNews(page, (block) => {
+      const items = (block.items ?? []).filter((item) => !targets.has(newsHref(item.href)));
+      if (items.length === (block.items ?? []).length) return block;
+      return { ...block, items };
+    });
+    if (updated === page) return page;
+    any = true;
+    return updated;
+  });
+  return any ? next : pages;
+}
+
+export function articleNewsCards(pages: CmsPage[]): CmsCard[] {
+  const cards: CmsCard[] = [];
+  for (const page of pages) {
+    const article = page.blocks.find((block) => block.type === "article");
+    if (!article || !article.heading.trim()) continue;
+    cards.push({
+      ...newsCardFromArticle(article, page.slug, page.published),
+      id: `article-news:${page.slug || "home"}`,
+    });
+  }
+  cards.sort((a, b) => {
+    const da = a.publishedAt?.trim() ?? "";
+    const db = b.publishedAt?.trim() ?? "";
+    if (da && db && da !== db) return db.localeCompare(da);
+    if (da && !db) return -1;
+    if (!da && db) return 1;
+    return a.heading.localeCompare(b.heading, "sv");
+  });
+  return cards;
 }
 
 export function setArticleNewsPublished(pages: CmsPage[], slug: string, published: boolean): CmsPage[] {
   const target = newsHref(slug);
   if (!target) return pages;
-  return pages.map((page) => {
-    if (!page.blocks.some((block) => isNewsBlock(block.type))) return page;
-    let changed = false;
-    const blocks = page.blocks.map((block) => {
-      if (!isNewsBlock(block.type)) return block;
+  return pages.map((page) =>
+    rewritePageNews(page, (block) => {
       let itemsChanged = false;
       const items = (block.items ?? []).map((item) => {
         if (newsHref(item.href) !== target || item.published === published) return item;
         itemsChanged = true;
         return { ...item, published };
       });
-      if (!itemsChanged) return block;
-      changed = true;
-      return { ...block, items };
-    });
-    return changed ? { ...page, blocks } : page;
-  });
+      return itemsChanged ? { ...block, items } : block;
+    }),
+  );
 }
 
 export function backfillTestArticleNews(pages: CmsPage[]): CmsPage[] | null {
   const source = pages.find((page) => page.title.trim().toLowerCase() === "test populera nyheter");
   const article = source?.blocks.find((block) => block.type === "article");
   if (!source || !article) return null;
-  const next = setArticleNewsPublished(
-    prependArticleNews(pages, newsCardFromArticle(article, source.slug, source.published)),
-    source.slug,
-    source.published,
+  const next = upsertArticleNews(
+    pages,
+    newsCardFromArticle(article, source.slug, source.published),
   );
   return next.some((page, index) => page !== pages[index]) ? next : null;
 }
@@ -458,6 +599,19 @@ export function quoteAfterIndex(quoteAfter: number | undefined, count: number): 
   const raw = quoteAfter ?? 0;
   if (raw < 0) return -1;
   return Math.min(raw, count - 1);
+}
+
+// The placement menu cannot use the index itself. Index 0 is "efter stycke 1",
+// and a select value of 0 is dropped, so that choice snaps back to the previous one.
+export function quotePlacementValue(index: number): string {
+  return index < 0 ? "before" : String(index + 1);
+}
+
+export function parseQuotePlacement(value: string): number {
+  if (value === "before") return -1;
+  const paragraph = Number(value);
+  if (!Number.isInteger(paragraph) || paragraph < 1) return 0;
+  return paragraph - 1;
 }
 
 export function createBlock(type: BlockType): CmsBlock {
@@ -484,6 +638,7 @@ export function cloneTemplateBlocks(blocks: CmsBlock[]): CmsBlock[] {
     };
     if (block.imageSide) next.imageSide = block.imageSide;
     if (block.align) next.align = block.align;
+    if (block.size) next.size = block.size;
     if (block.theme) next.theme = block.theme;
     if (block.shape !== undefined) next.shape = block.shape;
     if (block.type === "contact") {
@@ -531,12 +686,10 @@ export function blockLabel(type: BlockType): string {
 export function blockHasImage(type: BlockType): boolean {
   return (
     type === "hero" ||
-    type === "split" ||
     type === "banner" ||
     type === "imageText" ||
     type === "contact" ||
     type === "imagePair" ||
-    type === "highlight" ||
     type === "article"
   );
 }
@@ -547,12 +700,10 @@ export function blockHasTheme(type: BlockType): boolean {
 
 const expandedThemeTypes = new Set<BlockType>([
   "imageText",
-  "lead",
   "text",
   "contactUs",
   "contact",
   "imagePair",
-  "split",
   "sectionHeader",
   "article",
   "statement",
@@ -567,7 +718,6 @@ export function resolveTheme(block: CmsBlock): BlockTheme {
   if (block.type === "imageText" || block.type === "contact" || block.type === "imagePair") {
     return block.imageSide === "left" ? "mist" : "sand";
   }
-  if (block.type === "split") return "mist";
   return "white";
 }
 
@@ -584,7 +734,7 @@ const none: Omit<BlockFields, "heading" | "body"> = {
 
 export function fieldsFor(type: BlockType): BlockFields {
   if (type === "banner") {
-    return { ...none, heading: "Rubrik", body: "Liten rad", image: true };
+    return { ...none, heading: "Rubrik", body: "Liten rad", image: true, button: true };
   }
 
   if (type === "imageText") {
@@ -631,10 +781,6 @@ export function fieldsFor(type: BlockType): BlockFields {
     return { ...none, heading: "Rubrik", body: null, align: true, theme: true };
   }
 
-  if (type === "highlight") {
-    return { ...none, heading: "Rubrik", body: "Liten rad", image: true, button: true };
-  }
-
   if (type === "contactCards") {
     return { ...none, heading: "Rubrik", body: "Text", button: true };
   }
@@ -643,7 +789,7 @@ export function fieldsFor(type: BlockType): BlockFields {
     return { ...none, heading: "Rubrik", body: "Text", button: true, theme: true };
   }
 
-  if (type === "expertise" || type === "offering" || isNewsBlock(type)) {
+  if (type === "expertise" || type === "offering" || isNewsBlock(type) || type === "articleList") {
     return { ...none, heading: "Rubrik", body: null };
   }
 
@@ -651,7 +797,7 @@ export function fieldsFor(type: BlockType): BlockFields {
     return { ...none, heading: null, body: "Text", button: true, theme: true };
   }
 
-  if (type === "lead" || type === "text") {
+  if (type === "text") {
     return { ...none, heading: "Rubrik", body: "Text", theme: true };
   }
 
@@ -669,10 +815,6 @@ export function fieldsFor(type: BlockType): BlockFields {
       imageSide: true,
       theme: true,
     };
-  }
-
-  if (type === "split") {
-    return { ...none, heading: "Rubrik", body: "Text", image: true, theme: true };
   }
 
   return {

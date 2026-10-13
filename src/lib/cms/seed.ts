@@ -36,25 +36,26 @@ function areaPage({
         body: leadBody,
         image: "/images/hero.jpg",
       }),
-      block(`${segment}-lead`, "lead", {
+      block(`${segment}-lead`, "text", {
         heading: leadHeading,
         body: leadBody,
       }),
       block(`${segment}-image`, "imageText", {
         heading: experienceHeading,
-        body: "",
+        body: about.body,
         eyebrow: "Om Mindstreet",
         buttonLabel: "Läs mer",
         buttonHref: "/#kontakt",
         imageSide: "right",
         image: "/images/about.jpg",
       }),
-      block(`${segment}-highlight`, "highlight", {
+      block(`${segment}-banner`, "banner", {
         heading: seminar.title,
         body: seminar.kicker,
         buttonLabel: "Anmäl dig",
         buttonHref: "/#kontakt",
         image: "/images/seminar.jpg",
+        size: "large",
       }),
     ],
   };
@@ -75,13 +76,13 @@ export const seedPages: CmsPage[] = [
         body: sharedLeadBody,
         image: "/images/hero.jpg",
       }),
-      block("expertomraden-lead", "lead", {
+      block("expertomraden-lead", "text", {
         heading: intro.heading,
         body: intro.body,
       }),
       block("expertomraden-image", "imageText", {
         heading: experienceHeading,
-        body: "",
+        body: about.body,
         eyebrow: about.title,
         buttonLabel: about.cta.label,
         buttonHref: about.cta.href,

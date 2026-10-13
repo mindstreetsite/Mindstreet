@@ -1,5 +1,6 @@
+import { defaultMenu, isBuiltinMenuTemplate } from "@/lib/cms/library";
 import { seedPages } from "@/lib/cms/seed";
-import type { CmsBlock, CmsLink, CmsPage } from "@/lib/cms/types";
+import type { CmsBlock, CmsLink, CmsPage, PageRole } from "@/lib/cms/types";
 
 export type PageArchiveEntry = {
   id: string;
@@ -12,6 +13,7 @@ export type CmsTemplate = {
   slug: string;
   title: string;
   parentSlug?: string;
+  role?: PageRole;
   blocks: CmsBlock[];
 };
 
@@ -32,7 +34,6 @@ export type TemplateWriteResult = {
 export type ArchiveWriteResult = {
   next: CmsPage[] | null;
   archive: PageArchiveEntry[] | null;
-  templates?: CmsTemplate[] | null;
   slug?: string;
   error: string | null;
 };
@@ -59,6 +60,7 @@ export function seedState(): CmsState {
     archive: [],
     templates: [],
     templateArchive: [],
+    menu: defaultMenu(),
   };
 }
 
@@ -106,8 +108,14 @@ export function blocksWithoutImage(blocks: CmsBlock[], url: string): CmsBlock[] 
 
 function pageWithoutImage(page: CmsPage, url: string): CmsPage {
   const blocks = blocksWithoutImage(page.blocks, url);
-  if (blocks.every((block, index) => block === page.blocks[index])) return page;
-  return { ...page, blocks };
+  const pending = page.pending ? blocksWithoutImage(page.pending, url) : undefined;
+  const blocksSame = blocks.every((block, index) => block === page.blocks[index]);
+  const pendingSame =
+    pending === undefined ||
+    (page.pending !== undefined &&
+      pending.every((block, index) => block === page.pending![index]));
+  if (blocksSame && pendingSame) return page;
+  return pending === undefined ? { ...page, blocks } : { ...page, blocks, pending };
 }
 
 export function withoutImage(state: CmsState, url: string): { state: CmsState; changed: boolean } {
@@ -168,8 +176,8 @@ export function hydrateState(value: unknown): CmsState {
   return {
     pages: nextPages,
     archive,
-    templates,
-    templateArchive,
+    templates: templatesNotMatchingPages(templates, nextPages),
+    templateArchive: templateArchive.filter((entry) => !entry.hiddenPage),
     menu: hydrateMenu(raw.menu, nextPages),
   };
 }
@@ -197,56 +205,36 @@ function readLocalJson(key: string): unknown {
   return JSON.parse(raw);
 }
 
-export function hiddenTemplateSlugs(archive: TemplateArchiveEntry[]): string[] {
-  return archive.filter((entry) => entry.hiddenPage).map((entry) => entry.slug);
-}
-
-export function templateChoices(
-  pages: CmsPage[],
-  templates: CmsTemplate[],
-  hidden: Iterable<string> = [],
-): CmsPage[] {
-  const hiddenSet = new Set(hidden);
-  const live = new Set(pages.map((page) => page.slug));
-  const retained = templates
-    .filter((template) => !live.has(template.slug) && !hiddenSet.has(template.slug))
-    .map(templateAsPage);
-  return orderedPages([...pages.filter((page) => !hiddenSet.has(page.slug)), ...retained]);
+export function templateChoices(templates: CmsTemplate[]): CmsPage[] {
+  return orderedPages(
+    templates.filter((template) => !isBuiltinMenuTemplate(template.slug)).map(templateAsPage),
+  );
 }
 
 export function deleteTemplateChoice(
   slug: string,
-  pages: CmsPage[],
   templates: CmsTemplate[],
   templateArchive: TemplateArchiveEntry[],
 ): TemplateWriteResult {
-  const live = pages.find((page) => page.slug === slug);
+  if (isBuiltinMenuTemplate(slug)) {
+    return { templates: null, archive: null, error: "Mallen kan inte tas bort." };
+  }
   const stored = templates.find((template) => template.slug === slug);
-  if (!live && !stored) {
+  if (!stored) {
     return { templates: null, archive: null, error: "Mallen finns inte." };
   }
 
-  const template: CmsTemplate = live
-    ? {
-        slug: live.slug,
-        title: live.title,
-        parentSlug: live.parentSlug,
-        blocks: live.blocks,
-      }
-    : stored!;
   const entry: TemplateArchiveEntry = {
     id: crypto.randomUUID(),
     slug,
     deletedAt: new Date().toISOString(),
-    template,
-    hiddenPage: Boolean(live),
+    template: stored,
+    hiddenPage: false,
   };
-  const archive = [entry, ...templateArchive];
-  if (live) return { templates, archive, error: null };
 
   return {
     templates: templates.filter((item) => item.slug !== slug),
-    archive,
+    archive: [entry, ...templateArchive],
     error: null,
   };
 }
@@ -262,10 +250,6 @@ export function restoreTemplateChoice(
   }
 
   const archive = templateArchive.filter((item) => item.id !== id);
-  if (entry.hiddenPage) {
-    return { templates, archive, error: null };
-  }
-
   if (templates.some((template) => template.slug === entry.slug)) {
     return { templates: null, archive: null, error: "Mallen finns redan." };
   }
@@ -292,7 +276,6 @@ export function deletePagesToArchive(
   slug: string,
   pages: CmsPage[],
   archive: PageArchiveEntry[],
-  templates: CmsTemplate[],
 ): ArchiveWriteResult {
   const removed = pagesRemovedWith(slug, pages);
   if (!removed.some((page) => page.slug === slug)) {
@@ -309,7 +292,6 @@ export function deletePagesToArchive(
   return {
     next,
     archive: [entry, ...archive],
-    templates: retainTemplates(removed, templates),
     error: null,
   };
 }
@@ -341,17 +323,9 @@ export function restoreArchivedPages(
   };
 }
 
-function retainTemplates(removed: CmsPage[], templates: CmsTemplate[]): CmsTemplate[] {
-  const bySlug = new Map(templates.map((template) => [template.slug, template]));
-  for (const page of removed) {
-    bySlug.set(page.slug, {
-      slug: page.slug,
-      title: page.title,
-      parentSlug: page.parentSlug,
-      blocks: page.blocks,
-    });
-  }
-  return [...bySlug.values()];
+function templatesNotMatchingPages(templates: CmsTemplate[], pages: CmsPage[]): CmsTemplate[] {
+  const live = new Set(pages.map((page) => page.slug));
+  return templates.filter((template) => !live.has(template.slug));
 }
 
 function templateAsPage(template: CmsTemplate): CmsPage {
@@ -359,6 +333,7 @@ function templateAsPage(template: CmsTemplate): CmsPage {
     slug: template.slug,
     title: template.title,
     parentSlug: template.parentSlug,
+    role: template.role,
     published: false,
     links: [],
     blocks: template.blocks,
@@ -389,6 +364,7 @@ function hydrateTemplate(value: unknown): CmsTemplate | null {
     slug: page.slug,
     title: page.title,
     parentSlug: page.parentSlug,
+    role: page.role,
     blocks: page.blocks,
   };
 }
@@ -406,7 +382,23 @@ function hydrateArchiveEntry(value: unknown): PageArchiveEntry | null {
 export function getPublishedPage(slug: string, pages: CmsPage[]): CmsPage | null {
   const page = pages.find((item) => item.slug === slug) ?? null;
   if (!page || !page.published) return null;
-  return page;
+  if (page.pending === undefined) return page;
+  const { pending: _pending, ...published } = page;
+  return published;
+}
+
+export function pageDraft(page: CmsPage): CmsPage {
+  return page.pending ? { ...page, blocks: page.pending } : page;
+}
+
+export function hasPendingChanges(page: CmsPage): boolean {
+  return page.pending !== undefined && JSON.stringify(page.pending) !== JSON.stringify(page.blocks);
+}
+
+export function withoutPending(page: CmsPage): CmsPage {
+  if (page.pending === undefined) return page;
+  const { pending: _pending, ...rest } = page;
+  return rest;
 }
 
 export function normalizeSlug(input: string): string {
@@ -436,11 +428,17 @@ export function composeSlug(parentSlug: string | undefined, segment: string): st
   return `${parent}/${child}`;
 }
 
-export function validateSlug(input: string, pages: CmsPage[]): string | null {
+export function validateSlug(
+  input: string,
+  pages: CmsPage[],
+  ignore: ReadonlySet<string> = new Set(),
+): string | null {
   const slug = normalizeSlug(input);
 
   if (!slug) {
-    if (pages.some((page) => page.slug === "")) return "Det finns redan en startsida.";
+    if (pages.some((page) => page.slug === "" && !ignore.has(page.slug))) {
+      return "Det finns redan en startsida.";
+    }
     return null;
   }
 
@@ -452,7 +450,7 @@ export function validateSlug(input: string, pages: CmsPage[]): string | null {
     return "Använd bara små bokstäver, siffror och bindestreck.";
   }
   if (RESERVED.has(parts[0])) return "Den sökvägen är upptagen.";
-  if (pages.some((page) => page.slug === slug)) {
+  if (pages.some((page) => page.slug === slug && !ignore.has(page.slug))) {
     return "Det finns redan en sida med den sökvägen.";
   }
 
@@ -509,15 +507,47 @@ function hydratePage(value: unknown): CmsPage | null {
   const slug = page.slug;
   const parentFromSlug = slug.includes("/") ? slug.slice(0, slug.lastIndexOf("/")) : undefined;
 
+  const pending = Array.isArray(page.pending) ? hydrateBlocks(page.pending) : undefined;
+
   return {
     slug,
     title: typeof page.title === "string" && page.title.trim() ? page.title : slug,
     parentSlug:
       typeof page.parentSlug === "string" && page.parentSlug ? page.parentSlug : parentFromSlug,
+    role: page.role === "home" || page.role === "news" ? page.role : undefined,
     published: page.published !== false,
     links: Array.isArray(page.links) ? page.links.filter(isCmsLink) : [],
-    blocks: page.blocks,
+    blocks: hydrateBlocks(page.blocks),
+    pending,
   };
+}
+
+function hydrateBlocks(value: unknown): CmsBlock[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => hydrateBlock(item));
+}
+
+function hydrateBlock(value: unknown): CmsBlock {
+  const block = value as CmsBlock;
+  const type = (block as { type?: string } | null)?.type;
+  if (type === "highlight") {
+    return { ...block, type: "banner", size: block.size === "small" ? "small" : "large" };
+  }
+  if (type === "lead") {
+    return { ...block, type: "text" };
+  }
+  if (type === "split") {
+    return {
+      ...block,
+      type: "imageText",
+      imageSide: "left",
+      theme: block.theme ?? "mist",
+      eyebrow: undefined,
+      buttonLabel: undefined,
+      buttonHref: undefined,
+    };
+  }
+  return block;
 }
 
 function isCmsLink(value: unknown): value is CmsLink {
