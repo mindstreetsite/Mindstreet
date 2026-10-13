@@ -195,6 +195,141 @@ function TrashIcon() {
   );
 }
 
+function dropIndexAtPointer(
+  event: { clientY: number; currentTarget: EventTarget & HTMLElement },
+  fallback: number,
+) {
+  const rows = event.currentTarget.parentElement?.children;
+  if (!rows) return fallback;
+  for (let i = 0; i < rows.length; i += 1) {
+    const rect = (rows[i] as HTMLElement).getBoundingClientRect();
+    if (event.clientY < rect.top + rect.height / 2) return i;
+  }
+  return rows.length;
+}
+
+function SortableOnPageBlocks({
+  blocks,
+  editable = true,
+  onReorder,
+  onRemove,
+}: {
+  blocks: CmsBlock[];
+  editable?: boolean;
+  onReorder: (from: number, to: number) => void;
+  onRemove?: (id: string) => void;
+}) {
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
+  const dragIndexRef = useRef<number | null>(null);
+  const dragOriginRef = useRef<number | null>(null);
+
+  function resetDrag() {
+    dragOriginRef.current = null;
+    dragIndexRef.current = null;
+    setDragIndex(null);
+    setDropIndex(null);
+  }
+
+  return (
+    <ol className={dropIndex === blocks.length ? "is-drop-end" : undefined}>
+      {blocks.map((block, index) => (
+        <li
+          key={block.id}
+          className={[
+            editable ? "is-draggable" : "",
+            dragIndex === index ? "is-dragging" : "",
+            dropIndex === index ? "is-drop-before" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          onPointerDown={(event) => {
+            if (!editable) return;
+            if (event.button !== 0) return;
+            if ((event.target as HTMLElement).closest("button")) return;
+            dragOriginRef.current = event.clientY;
+            dragIndexRef.current = null;
+            try {
+              event.currentTarget.setPointerCapture(event.pointerId);
+            } catch {
+              // Pointer capture is unavailable for some synthetic drags.
+            }
+          }}
+          onPointerMove={(event) => {
+            if (dragOriginRef.current === null) return;
+            if (dragIndexRef.current === null) {
+              if (Math.abs(event.clientY - dragOriginRef.current) < 4) return;
+              dragIndexRef.current = index;
+              setDragIndex(index);
+            }
+            const next = dropIndexAtPointer(event, blocks.length);
+            setDropIndex((current) => (current === next ? current : next));
+          }}
+          onPointerUp={(event) => {
+            const from = dragIndexRef.current;
+            const to = dropIndexAtPointer(event, index);
+            resetDrag();
+            if (from === null) return;
+            onReorder(from, to);
+          }}
+          onPointerCancel={resetDrag}
+        >
+          <div className="admin-block-head">
+            <span className="admin-block-label">
+              {editable ? (
+                <span className="admin-drag-handle" aria-hidden="true">
+                  <DragGrip />
+                </span>
+              ) : null}
+              <strong>{blockLabel(block.type)}</strong>
+            </span>
+            {editable && onRemove ? (
+              <button
+                type="button"
+                className="admin-icon-button"
+                aria-label={`Ta bort ${blockLabel(block.type)}`}
+                onClick={() => onRemove(block.id)}
+              >
+                <TrashIcon />
+              </button>
+            ) : null}
+          </div>
+          <span>{block.heading}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function CreatePageStructure({
+  title,
+  empty,
+  blocks,
+  onReorder,
+  onAdd,
+}: {
+  title: string;
+  empty: string;
+  blocks: CmsBlock[];
+  onReorder: (from: number, to: number) => void;
+  onAdd: () => void;
+}) {
+  return (
+    <div className="admin-on-page">
+      <h3>På {title}</h3>
+      {blocks.length === 0 ? (
+        <p className="admin-empty">{empty}</p>
+      ) : (
+        <SortableOnPageBlocks blocks={blocks} onReorder={onReorder} />
+      )}
+      <button type="button" className="admin-primary admin-add-component" onClick={onAdd}>
+        Addera komponent
+      </button>
+      <LockedFooterNote />
+    </div>
+  );
+}
+
 function RoleSwitch({
   label,
   description,
@@ -315,10 +450,7 @@ export default function AdminPage() {
   const [phase, setPhase] = useState<"loading" | "locked" | "ready">("loading");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState<string | null>(null);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [dropIndex, setDropIndex] = useState<number | null>(null);
-  const dragIndexRef = useRef<number | null>(null);
-  const dragOriginRef = useRef<number | null>(null);
+  const [catalogOpen, setCatalogOpen] = useState(false);
   const pagesRef = useRef(pages);
   const archiveRef = useRef(archive);
   const templatesRef = useRef(templates);
@@ -1195,6 +1327,17 @@ export default function AdminPage() {
     }
   }
 
+  function reorderDraftBlocks(from: number, to: number) {
+    if (from === to || from + 1 === to) return;
+    setDraftBlocks((current) => applyBlockOrder(current, from, to));
+  }
+
+  function addDraftBlock(type: BlockType) {
+    setDraftBlocks((current) => [...current, createBlock(type)]);
+    setCatalogOpen(false);
+    setNotice(null);
+  }
+
   function removeComponentBlock(id: string) {
     if (blankMode) {
       setBlankBlocks((current) => current.filter((block) => block.id !== id));
@@ -1305,6 +1448,10 @@ export default function AdminPage() {
     // Hydrates the selected template or page once, so the draft stays on this screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, panel, templateSlug, structureSlug]);
+
+  useEffect(() => {
+    setCatalogOpen(false);
+  }, [panel, templateSlug, structureSlug]);
 
   if (phase !== "ready") {
     return (
@@ -1648,22 +1795,13 @@ export default function AdminPage() {
                       </label>
                     )}
                     {panel === "create" && structurePage ? (
-                      <div className="admin-on-page">
-                        <h3>På {pageTitle(structurePage)}</h3>
-                        {draftBlocks.length === 0 ? (
-                          <p className="admin-empty">Inga komponenter ännu.</p>
-                        ) : (
-                          <ol>
-                            {draftBlocks.map((block) => (
-                              <li key={block.id}>
-                                <strong>{blockLabel(block.type)}</strong>
-                                <span>{block.heading}</span>
-                              </li>
-                            ))}
-                          </ol>
-                        )}
-                        <LockedFooterNote />
-                      </div>
+                      <CreatePageStructure
+                        title={pageTitle(structurePage)}
+                        empty="Inga komponenter ännu."
+                        blocks={draftBlocks}
+                        onReorder={reorderDraftBlocks}
+                        onAdd={() => setCatalogOpen(true)}
+                      />
                     ) : menuSelected ? (
                       <div className="admin-on-page">
                         <h3>På Meny</h3>
@@ -1680,6 +1818,14 @@ export default function AdminPage() {
                           </ol>
                         )}
                       </div>
+                    ) : panel === "create" && templatePage ? (
+                      <CreatePageStructure
+                        title={pageTitle(templatePage)}
+                        empty="Mallen har inga komponenter ännu."
+                        blocks={draftBlocks}
+                        onReorder={reorderDraftBlocks}
+                        onAdd={() => setCatalogOpen(true)}
+                      />
                     ) : templatePage ? (
                       <div className="admin-on-page">
                         <h3>På {pageTitle(templatePage)}</h3>
@@ -1939,7 +2085,7 @@ export default function AdminPage() {
                               onChange={(id, patch) => updateDraftBlock(id, patch)}
                               onImage={(id, src, field) => updateDraftBlock(id, { [field]: src })}
                               onItems={(id, items) => updateDraftBlock(id, { items })}
-                              onMove={moveDraftBlock}
+                              onMove={panel === "create" ? undefined : moveDraftBlock}
                               onRemove={removeDraftBlock}
                             />
                           )}
@@ -2042,103 +2188,12 @@ export default function AdminPage() {
                     {componentBlocks.length === 0 ? (
                       <p className="admin-empty">Inga komponenter på sidan ännu.</p>
                     ) : (
-                      <ol
-                        className={
-                          dropIndex === componentBlocks.length ? "is-drop-end" : undefined
-                        }
-                      >
-                        {componentBlocks.map((block, index) => (
-                          <li
-                            key={block.id}
-                            className={[
-                              structureEditable ? "is-draggable" : "",
-                              dragIndex === index ? "is-dragging" : "",
-                              dropIndex === index ? "is-drop-before" : "",
-                            ]
-                              .filter(Boolean)
-                              .join(" ")}
-                            onPointerDown={(event) => {
-                              if (!structureEditable) return;
-                              if (event.button !== 0) return;
-                              if ((event.target as HTMLElement).closest("button")) return;
-                              dragOriginRef.current = event.clientY;
-                              dragIndexRef.current = null;
-                              try {
-                                event.currentTarget.setPointerCapture(event.pointerId);
-                              } catch {
-                                // Pointer capture is unavailable for some synthetic drags.
-                              }
-                            }}
-                            onPointerMove={(event) => {
-                              if (dragOriginRef.current === null) return;
-                              if (dragIndexRef.current === null) {
-                                if (Math.abs(event.clientY - dragOriginRef.current) < 4) return;
-                                dragIndexRef.current = index;
-                                setDragIndex(index);
-                              }
-                              const rows = event.currentTarget.parentElement?.children;
-                              if (!rows) return;
-                              let next = rows.length;
-                              for (let i = 0; i < rows.length; i += 1) {
-                                const rect = (rows[i] as HTMLElement).getBoundingClientRect();
-                                if (event.clientY < rect.top + rect.height / 2) {
-                                  next = i;
-                                  break;
-                                }
-                              }
-                              setDropIndex((current) => (current === next ? current : next));
-                            }}
-                            onPointerUp={(event) => {
-                              const from = dragIndexRef.current;
-                              const rows = event.currentTarget.parentElement?.children;
-                              let to = rows?.length ?? index;
-                              if (rows) {
-                                for (let i = 0; i < rows.length; i += 1) {
-                                  const rect = (rows[i] as HTMLElement).getBoundingClientRect();
-                                  if (event.clientY < rect.top + rect.height / 2) {
-                                    to = i;
-                                    break;
-                                  }
-                                }
-                              }
-                              dragOriginRef.current = null;
-                              dragIndexRef.current = null;
-                              setDragIndex(null);
-                              setDropIndex(null);
-                              if (from === null) return;
-                              reorderComponentBlocks(from, to);
-                            }}
-                            onPointerCancel={() => {
-                              dragOriginRef.current = null;
-                              dragIndexRef.current = null;
-                              setDragIndex(null);
-                              setDropIndex(null);
-                            }}
-                          >
-                            <div className="admin-block-head">
-                              <span className="admin-block-label">
-                                {structureEditable ? (
-                                  <span className="admin-drag-handle" aria-hidden="true">
-                                    <DragGrip />
-                                  </span>
-                                ) : null}
-                                <strong>{blockLabel(block.type)}</strong>
-                              </span>
-                              {structureEditable ? (
-                                <button
-                                  type="button"
-                                  className="admin-icon-button"
-                                  aria-label={`Ta bort ${blockLabel(block.type)}`}
-                                  onClick={() => removeComponentBlock(block.id)}
-                                >
-                                  <TrashIcon />
-                                </button>
-                              ) : null}
-                            </div>
-                            <span>{block.heading}</span>
-                          </li>
-                        ))}
-                      </ol>
+                      <SortableOnPageBlocks
+                        blocks={componentBlocks}
+                        editable={structureEditable}
+                        onReorder={reorderComponentBlocks}
+                        onRemove={removeComponentBlock}
+                      />
                     )}
                     <LockedFooterNote />
                   </div>
@@ -2313,6 +2368,9 @@ export default function AdminPage() {
           }}
           onConfirm={confirmDeleteTemplate}
         />
+      ) : null}
+      {catalogOpen ? (
+        <AddComponentDialog onAdd={addDraftBlock} onCancel={() => setCatalogOpen(false)} />
       ) : null}
     </div>
   );
@@ -2529,23 +2587,27 @@ function PageBlockList({
         <li key={block.id}>
           <div className="admin-block-head">
             <strong>{blockLabel(block.type)}</strong>
-            {onMove && onRemove && showsStructure(mode) ? (
+            {showsStructure(mode) && (onMove || onRemove) ? (
               <div>
-                <button type="button" onClick={() => onMove(index, -1)} disabled={index === 0}>
-                  Upp
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onMove(index, 1)}
-                  disabled={index === blocks.length - 1}
-                >
-                  Ner
-                </button>
-                {isNewsBlock(block.type) ? null : (
+                {onMove ? (
+                  <>
+                    <button type="button" onClick={() => onMove(index, -1)} disabled={index === 0}>
+                      Upp
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onMove(index, 1)}
+                      disabled={index === blocks.length - 1}
+                    >
+                      Ner
+                    </button>
+                  </>
+                ) : null}
+                {onRemove && !isNewsBlock(block.type) ? (
                   <button type="button" onClick={() => onRemove(block.id)}>
                     Ta bort
                   </button>
-                )}
+                ) : null}
               </div>
             ) : null}
           </div>
@@ -4288,6 +4350,41 @@ function BlockCatalog({ onAdd }: { onAdd: (type: BlockType) => void }) {
         ))}
       </ul>
     </section>
+  );
+}
+
+function AddComponentDialog({
+  onAdd,
+  onCancel,
+}: {
+  onAdd: (type: BlockType) => void;
+  onCancel: () => void;
+}) {
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") onCancel();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel]);
+
+  return (
+    <div
+      className="admin-modal-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onCancel();
+      }}
+    >
+      <div
+        className="admin-modal admin-modal-catalog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-component-title"
+      >
+        <h2 id="add-component-title">Addera komponent</h2>
+        <BlockCatalog onAdd={onAdd} />
+      </div>
+    </div>
   );
 }
 

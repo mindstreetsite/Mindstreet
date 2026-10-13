@@ -409,6 +409,18 @@
   overflow: hidden;
 }
 
+.admin-pages-layout .admin-on-page .admin-block-label,
+.admin-pages-layout .admin-on-page .admin-drag-handle {
+  display: inline-flex;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+
+.admin-add-component {
+  width: 100%;
+  margin-top: 12px;
+}
+
 .admin-pages-layout .admin-locked-footer {
   margin-top: 12px;
 }
@@ -917,6 +929,17 @@ span.admin-publish {
   border-radius: 16px;
   background: var(--paper);
   box-shadow: 0 18px 48px color-mix(in srgb, var(--navy) 18%, transparent);
+}
+
+.admin-modal-catalog {
+  width: min(760px, 100%);
+  max-height: min(820px, calc(100vh - 48px));
+  overflow: auto;
+  background: var(--canvas);
+}
+
+.admin-modal-catalog .admin-library ul {
+  margin-top: 16px;
 }
 
 .admin-modal h2 {
