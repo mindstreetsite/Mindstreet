@@ -130,6 +130,7 @@ const defaults: Record<BlockType, Omit<CmsBlock, "id" | "type">> = {
   pageHeader: {
     heading: "",
     body: "",
+    theme: "white",
   },
   hero: {
     heading: "Lorem ipsum",
@@ -624,11 +625,19 @@ export function parseQuotePlacement(value: string): number {
   return paragraph - 1;
 }
 
+export function todayDateInput(now = new Date()): string {
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function createBlock(type: BlockType): CmsBlock {
   return {
     id: crypto.randomUUID(),
     type,
     ...defaults[type],
+    ...(type === "article" ? { publishedAt: todayDateInput() } : {}),
     ...(type === "expertise" ? { items: createExpertiseItems() } : {}),
     ...(type === "offering" ? { items: createOfferingItems() } : {}),
     ...(type === "news" ? { items: createNewsItems() } : {}),
@@ -663,6 +672,7 @@ export function cloneTemplateBlocks(blocks: CmsBlock[]): CmsBlock[] {
       if (block.quoteAfter !== undefined) next.quoteAfter = block.quoteAfter;
       if (block.quoteCredit !== undefined) next.quoteCredit = "";
     }
+    if (block.type === "article") next.publishedAt = todayDateInput();
     if (
       block.type === "expertise" ||
       block.type === "offering" ||
@@ -812,7 +822,11 @@ export function fieldsFor(type: BlockType): BlockFields {
     return { ...none, heading: "Rubrik", body: "Text", theme: true };
   }
 
-  if (type === "pageHeader" || type === "textColumn") {
+  if (type === "pageHeader") {
+    return { ...none, heading: null, body: null, theme: true };
+  }
+
+  if (type === "textColumn") {
     return { ...none, heading: null, body: null };
   }
 
@@ -827,7 +841,6 @@ export function fieldsFor(type: BlockType): BlockFields {
       body: "Text",
       quote: true,
       image: true,
-      imageSide: true,
       theme: true,
     };
   }

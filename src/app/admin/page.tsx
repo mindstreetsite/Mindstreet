@@ -29,7 +29,11 @@ import {
   type CompletenessIssue,
 } from "@/lib/cms/completeness";
 import { formatNewsDate, newsDateForSlug } from "@/lib/cms/news-date";
+import { AdminSelect } from "@/components/admin/select";
 import { Switch } from "@/components/admin/switch";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { LockedFooterNote } from "@/components/cms/locked-footer";
 import { PageBlocks } from "@/components/cms/page-blocks";
 import { Header } from "@/components/header";
@@ -43,6 +47,7 @@ import {
   cloneTemplateBlocks,
   createBlock,
   createCard,
+  todayDateInput,
   createContactCard,
   createOfferingRow,
   createTextColumnSection,
@@ -94,6 +99,7 @@ import {
   type TemplateArchiveEntry,
 } from "@/lib/cms/storage";
 import type { BlockTheme, BlockType, CmsBlock, CmsCard, CmsLink, CmsPage, PageRole } from "@/lib/cms/types";
+import "./ui.css";
 import "./admin.css";
 
 const PREVIEW_WIDTH = 1440;
@@ -149,6 +155,26 @@ function articlePublishedAt(page: CmsPage): string {
 function articleLabel(page: CmsPage): string {
   const heading = page.blocks.find((block) => block.type === "article")?.heading.trim() ?? "";
   return heading || pageTitle(page);
+}
+
+function bannerLinkOptions(pages: CmsPage[], savedHref: string) {
+  const sitePages = orderedPages(pages.filter((page) => !isArticlePage(page)));
+  const articles = pages.filter((page) => isArticlePage(page)).sort(compareArticles);
+  const listed = new Set([...sitePages, ...articles].map((page) => `/${page.slug}`));
+  return [
+    { value: "", label: "Välj sida" },
+    ...(savedHref && !listed.has(savedHref) ? [{ value: savedHref, label: savedHref }] : []),
+    ...sitePages.map((page) => ({
+      value: `/${page.slug}`,
+      label: page.parentSlug ? `– ${pageTitle(page)}` : pageTitle(page),
+      group: "Sidor",
+    })),
+    ...articles.map((page) => ({
+      value: `/${page.slug}`,
+      label: articleLabel(page),
+      group: "Nyheter",
+    })),
+  ];
 }
 
 function compareArticles(a: CmsPage, b: CmsPage): number {
@@ -323,9 +349,9 @@ function CreatePageStructure({
       ) : (
         <SortableOnPageBlocks blocks={blocks} onReorder={onReorder} />
       )}
-      <button type="button" className="admin-primary admin-add-component" onClick={onAdd}>
+      <Button type="button" className="admin-add-component" onClick={onAdd}>
         Addera komponent
-      </button>
+      </Button>
       <LockedFooterNote />
     </div>
   );
@@ -357,15 +383,13 @@ function FieldSwitch({
   label,
   checked,
   onChange,
-  stacked = false,
 }: {
   label: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
-  stacked?: boolean;
 }) {
   return (
-    <label className={stacked ? "admin-inline-switch is-stacked" : "admin-inline-switch"}>
+    <label className="admin-inline-switch">
       <span>{label}</span>
       <Switch checked={checked} onChange={onChange} />
     </label>
@@ -399,7 +423,7 @@ function RoleSwitches({
 
 const panels: { id: Panel; kicker: string; title: string }[] = [
   { id: "news", kicker: "Nyhet", title: "Lägg till nyhet" },
-  { id: "pages", kicker: "Befintliga", title: "Publicerade sidor" },
+  { id: "pages", kicker: "Befintliga", title: "Publisera sidor" },
   { id: "create", kicker: "Ny sida", title: "Skapa eller redigera sida" },
   { id: "components", kicker: "Bibliotek", title: "Skapa ny sidmall utifrån komponenter" },
   { id: "images", kicker: "Bilder", title: "Bildbibliotek" },
@@ -644,7 +668,7 @@ export default function AdminPage() {
                 ? undefined
                 : parentSlug || undefined,
             role: panel === "create" ? createRole || undefined : undefined,
-            published: structurePage?.published ?? published,
+            published: panel === "news" ? published : (structurePage?.published ?? false),
             links: structurePage?.links ?? [],
             blocks: draftBlocks,
           },
@@ -931,29 +955,6 @@ export default function AdminPage() {
     return nextSlug;
   }
 
-  async function publishEditedPage() {
-    const slug = await saveExistingPage();
-    if (slug === null) return;
-    await publishPendingChanges(slug);
-    const saved = pagesRef.current.find((page) => page.slug === slug);
-    if (saved) {
-      setDraftBlocks(structuredClone(pageDraft(saved).blocks));
-      draftKey.current = `${slug}:edit`;
-    }
-  }
-
-  async function discardEditedPage() {
-    if (structureSlug === null) return;
-    await discardPendingChanges(structureSlug);
-    const saved = pagesRef.current.find((page) => page.slug === structureSlug);
-    if (!saved) return;
-    setTitleInput(saved.title);
-    setParentSlug(saved.parentSlug ?? "");
-    setCreateRole(saved.role ?? "");
-    setDraftBlocks(structuredClone(saved.blocks));
-    draftKey.current = `${saved.slug}:edit`;
-  }
-
   async function createPage(event: FormEvent) {
     event.preventDefault();
     if (panel === "create" && structureSlug !== null) {
@@ -992,19 +993,20 @@ export default function AdminPage() {
       return;
     }
 
+    const publishNow = panel === "news" && published;
     const draft: CmsPage = {
       slug,
       title,
       parentSlug: parent,
       role: role || undefined,
-      published,
+      published: publishNow,
       links: [],
       blocks: draftBlocks,
     };
     const complete = isPageComplete(draft, current);
     const page: CmsPage = {
       ...draft,
-      published: published && complete,
+      published: publishNow && complete,
     };
     pagesRef.current = syncAllArticleNews([...current, page]);
     setPages(pagesRef.current);
@@ -1013,7 +1015,7 @@ export default function AdminPage() {
     setLastSavedSlug(page.slug);
     resetCreateForm();
     setPanel("pages");
-    if (!complete && published) {
+    if (!complete && publishNow) {
       setNotice("Sidan sparades som utkast eftersom fält eller undersideslänkar saknas.");
     } else {
       setNotice(null);
@@ -1438,6 +1440,19 @@ export default function AdminPage() {
     setCatalogOpen(false);
   }, [panel, templateSlug, structureSlug]);
 
+  useEffect(() => {
+    const today = todayDateInput();
+    setDraftBlocks((current) => {
+      let changed = false;
+      const next = current.map((block) => {
+        if (block.type !== "article" || block.publishedAt?.trim()) return block;
+        changed = true;
+        return { ...block, publishedAt: today };
+      });
+      return changed ? next : current;
+    });
+  }, [draftBlocks]);
+
   if (phase !== "ready") {
     return (
       <main className="admin-gate">
@@ -1449,7 +1464,7 @@ export default function AdminPage() {
               <p>Sidorna är gemensamma. Logga in för att ändra dem.</p>
               <label>
                 Lösenord
-                <input
+                <Input
                   type="password"
                   value={password}
                   autoComplete="current-password"
@@ -1457,9 +1472,7 @@ export default function AdminPage() {
                 />
               </label>
               {loginError ? <p className="admin-notice">{loginError}</p> : null}
-              <button className="admin-primary" type="submit">
-                Logga in
-              </button>
+              <Button type="submit">Logga in</Button>
             </>
           ) : (
             <p>Hämtar det gemensamma innehållet.</p>
@@ -1529,7 +1542,7 @@ export default function AdminPage() {
         <main className="admin-main">
           {panel === "pages" ? (
               <div className="admin-panel">
-                <PageHeading kicker="Befintliga" title="Publicerade sidor" />
+                <PageHeading kicker="Befintliga" title="Publisera sidor" />
               <div className="admin-pages-layout">
                 <section aria-label="Befintliga sidor">
                   <ul className="admin-page-list">
@@ -1570,7 +1583,14 @@ export default function AdminPage() {
                   <section aria-label="Vald sida">
                     <div className="admin-main-head">
                       <div>
-                        <p className="admin-kicker">Sida</p>
+                        <div className="admin-kicker-row">
+                          <p className="admin-kicker">Sida</p>
+                          <PublishBadge
+                            published={selected.published}
+                            changed={selectedChanged}
+                            onToggle={() => togglePublished(selected.slug)}
+                          />
+                        </div>
                         <h2 className="admin-title">{pageTitle(selected)}</h2>
                         <p className="admin-preview">
                           {pageAddress(selected.slug)}
@@ -1578,25 +1598,20 @@ export default function AdminPage() {
                       </div>
                       <div className="admin-main-actions">
                         <div className="admin-action-row">
-                          <a
-                            className={selectedChanged ? "admin-quiet" : "admin-primary"}
-                            href={`/${selected.slug}`}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            Öppna sida
-                          </a>
-                          <button
+                          <Button variant={selectedChanged ? "outline" : "default"} asChild>
+                            <a href={`/${selected.slug}`} target="_blank" rel="noreferrer">
+                              Öppna sida
+                            </a>
+                          </Button>
+                          <Button
                             type="button"
-                            className="admin-quiet"
+                            variant="outline"
                             onClick={() => openStructure(selected.slug)}
                           >
                             Ändra uppbyggnad
-                          </button>
-                          <PublishControls
-                            published={selected.published}
+                          </Button>
+                          <PublishActions
                             changed={selectedChanged}
-                            onToggle={() => togglePublished(selected.slug)}
                             onPublish={() => void publishPendingChanges(selected.slug)}
                             onDiscard={() => void discardPendingChanges(selected.slug)}
                           />
@@ -1640,13 +1655,13 @@ export default function AdminPage() {
                           ? "Sidan och dess undersidor försvinner från webbplatsen. En kopia sparas under Borttagna sidor och mallar och kan återställas."
                           : "Sidan försvinner från webbplatsen. En kopia sparas under Borttagna sidor och mallar och kan återställas."}
                       </p>
-                      <button
+                      <Button
                         type="button"
-                        className="admin-danger-button"
+                        variant="destructive"
                         onClick={() => openDelete(selected.slug)}
                       >
                         Ta bort sida
-                      </button>
+                      </Button>
                     </section>
                   </section>
                 ) : (
@@ -1694,7 +1709,7 @@ export default function AdminPage() {
                           <strong>Skapa ny sida</strong>
                           <label className="admin-pick" htmlFor="create-template">
                             Mall
-                            <select
+                            <AdminSelect
                               id="create-template"
                               value={
                                 structurePage ||
@@ -1703,30 +1718,28 @@ export default function AdminPage() {
                                   ? UNSELECTED_TEMPLATE
                                   : slugToOption(templateSlug)
                               }
-                              onChange={(event) => {
-                                const slug = event.target.value;
+                              onChange={(slug) => {
                                 if (slug === UNSELECTED_TEMPLATE) return;
                                 chooseTemplate(optionToSlug(slug));
                               }}
-                            >
-                              <option value={UNSELECTED_TEMPLATE} disabled>
-                                Välj mall
-                              </option>
-                              {visibleTemplateOptions.map((page) => (
-                                <option key={page.slug || "/"} value={slugToOption(page.slug)}>
-                                  {page.parentSlug && !isBuiltinNewsTemplate(page.slug)
-                                    ? `– ${pageTitle(page)}`
-                                    : pageTitle(page)}
-                                </option>
-                              ))}
-                            </select>
+                              options={[
+                                { value: UNSELECTED_TEMPLATE, label: "Välj mall", disabled: true },
+                                ...visibleTemplateOptions.map((page) => ({
+                                  value: slugToOption(page.slug),
+                                  label:
+                                    page.parentSlug && !isBuiltinNewsTemplate(page.slug)
+                                      ? `– ${pageTitle(page)}`
+                                      : pageTitle(page),
+                                })),
+                              ]}
+                            />
                           </label>
                         </div>
                         <div className="admin-create-choice">
                           <strong>Redigera sida</strong>
                           <label className="admin-pick" htmlFor="edit-page">
                             Sida
-                            <select
+                            <AdminSelect
                               id="edit-page"
                               value={
                                 menuSelected
@@ -1735,48 +1748,43 @@ export default function AdminPage() {
                                     ? UNSELECTED_PAGE
                                     : slugToOption(structureSlug)
                               }
-                              onChange={(event) => {
-                                const slug = event.target.value;
+                              onChange={(slug) => {
                                 if (slug === UNSELECTED_PAGE) return;
                                 chooseEditPage(optionToSlug(slug));
                               }}
-                            >
-                              <option value={UNSELECTED_PAGE} disabled>
-                                Välj sida
-                              </option>
-                              <option value={slugToOption(MENU_TEMPLATE_SLUG)}>Meny</option>
-                              {listedPages.map((page) => (
-                                <option key={page.slug || "/"} value={slugToOption(page.slug)}>
-                                  {page.parentSlug ? `– ${pageTitle(page)}` : pageTitle(page)}
-                                </option>
-                              ))}
-                            </select>
+                              options={[
+                                { value: UNSELECTED_PAGE, label: "Välj sida", disabled: true },
+                                { value: slugToOption(MENU_TEMPLATE_SLUG), label: "Meny" },
+                                ...listedPages.map((page) => ({
+                                  value: slugToOption(page.slug),
+                                  label: page.parentSlug ? `– ${pageTitle(page)}` : pageTitle(page),
+                                })),
+                              ]}
+                            />
                           </label>
                         </div>
                       </div>
                     ) : (
                       <label className="admin-pick" htmlFor="create-template">
                         Mall
-                        <select
+                        <AdminSelect
                           id="create-template"
                           value={templateSlug === null ? UNSELECTED_TEMPLATE : slugToOption(templateSlug)}
-                          onChange={(event) => {
-                            const slug = event.target.value;
+                          onChange={(slug) => {
                             if (slug === UNSELECTED_TEMPLATE) return;
                             chooseTemplate(optionToSlug(slug));
                           }}
-                        >
-                          <option value={UNSELECTED_TEMPLATE} disabled>
-                            Välj mall
-                          </option>
-                          {visibleTemplateOptions.map((page) => (
-                            <option key={page.slug || "/"} value={slugToOption(page.slug)}>
-                              {page.parentSlug && !isBuiltinNewsTemplate(page.slug)
-                                ? `– ${pageTitle(page)}`
-                                : pageTitle(page)}
-                            </option>
-                          ))}
-                        </select>
+                          options={[
+                            { value: UNSELECTED_TEMPLATE, label: "Välj mall", disabled: true },
+                            ...visibleTemplateOptions.map((page) => ({
+                              value: slugToOption(page.slug),
+                              label:
+                                page.parentSlug && !isBuiltinNewsTemplate(page.slug)
+                                  ? `– ${pageTitle(page)}`
+                                  : pageTitle(page),
+                            })),
+                          ]}
+                        />
                       </label>
                     )}
                     {panel === "create" && structurePage ? (
@@ -1840,13 +1848,13 @@ export default function AdminPage() {
                           Mallen försvinner från listan. En kopia sparas under Borttagna sidor och mallar
                           och kan återställas. Sidor som redan finns påverkas inte.
                         </p>
-                        <button
+                        <Button
                           type="button"
-                          className="admin-danger-button"
+                          variant="destructive"
                           onClick={() => openDeleteTemplate(templatePage.slug)}
                         >
                           Ta bort mall
-                        </button>
+                        </Button>
                       </section>
                     ) : null}
                     {panel === "news" ? (
@@ -1873,24 +1881,26 @@ export default function AdminPage() {
                     <section aria-label="Redigera nyhet">
                       <div className="admin-main-head">
                         <div>
-                          <p className="admin-kicker">Nyhet</p>
+                          <div className="admin-kicker-row">
+                            <p className="admin-kicker">Nyhet</p>
+                            <PublishBadge
+                              published={newsArticle.published}
+                              changed={newsChanged}
+                              onToggle={() => togglePublished(newsArticle.slug)}
+                            />
+                          </div>
                           <h2 className="admin-title">{articleLabel(newsDraft ?? newsArticle)}</h2>
                           <p className="admin-preview">{pageAddress(newsArticle.slug)}</p>
                         </div>
                         <div className="admin-main-actions">
                           <div className="admin-action-row">
-                            <a
-                              className={newsChanged ? "admin-quiet" : "admin-primary"}
-                              href={`/${newsArticle.slug}`}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              Öppna sida
-                            </a>
-                            <PublishControls
-                              published={newsArticle.published}
+                            <Button variant={newsChanged ? "outline" : "default"} asChild>
+                              <a href={`/${newsArticle.slug}`} target="_blank" rel="noreferrer">
+                                Öppna sida
+                              </a>
+                            </Button>
+                            <PublishActions
                               changed={newsChanged}
-                              onToggle={() => togglePublished(newsArticle.slug)}
                               onPublish={() => void publishPendingChanges(newsArticle.slug)}
                               onDiscard={() => void discardPendingChanges(newsArticle.slug)}
                             />
@@ -1955,44 +1965,34 @@ export default function AdminPage() {
                           </div>
                           <div className="admin-main-actions">
                             <div className="admin-action-row">
-                              {structurePage ? (
-                                <PublishControls
-                                  published={structurePage.published}
-                                  changed={structureChanged}
-                                  onToggle={() => togglePublished(structurePage.slug)}
-                                  onPublish={() => void publishEditedPage()}
-                                  onDiscard={() => void discardEditedPage()}
+                              {panel === "news" ? (
+                                <FieldSwitch
+                                  label="Publicera"
+                                  checked={published}
+                                  onChange={setPublished}
                                 />
-                              ) : (
-                                <label className="admin-check">
-                                  <input
-                                    type="checkbox"
-                                    checked={published}
-                                    onChange={(event) => setPublished(event.target.checked)}
-                                  />
-                                  Publicera
-                                </label>
-                              )}
-                              <button type="submit" className="admin-primary">
+                              ) : null}
+                              <Button type="submit">
                                 {panel === "news"
                                   ? "Spara nyhet"
                                   : structurePage
                                     ? "Spara sida"
                                     : "Skapa ny sida"}
-                              </button>
+                              </Button>
                               {structurePage || lastSavedSlug !== null ? (
-                                <a
-                                  className="admin-quiet"
-                                  href={
-                                    (structurePage ? structurePage.slug : lastSavedSlug)
-                                      ? `/${structurePage ? structurePage.slug : lastSavedSlug}`
-                                      : "/"
-                                  }
-                                  target="_blank"
-                                  rel="noreferrer"
-                                >
-                                  Öppna sida
-                                </a>
+                                <Button variant="outline" asChild>
+                                  <a
+                                    href={
+                                      (structurePage ? structurePage.slug : lastSavedSlug)
+                                        ? `/${structurePage ? structurePage.slug : lastSavedSlug}`
+                                        : "/"
+                                    }
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  >
+                                    Öppna sida
+                                  </a>
+                                </Button>
                               ) : null}
                             </div>
                           </div>
@@ -2010,7 +2010,7 @@ export default function AdminPage() {
                             htmlFor="page-title"
                             issue={findCompletenessIssue(createIssues, "title")}
                           >
-                            <input
+                            <Input
                               id="page-title"
                               value={titleInput}
                               onChange={(event) => setTitleInput(event.target.value)}
@@ -2025,19 +2025,19 @@ export default function AdminPage() {
                           {panel === "news" ? null : (
                             <label htmlFor="page-parent">
                               Förälder
-                              <select
+                              <AdminSelect
                                 id="page-parent"
                                 value={createRole === "home" ? "" : parentSlug}
                                 disabled={createRole === "home"}
-                                onChange={(event) => setParentSlug(event.target.value)}
-                              >
-                                <option value="">Ingen</option>
-                                {formParents.map((page) => (
-                                  <option key={page.slug || "/"} value={page.slug}>
-                                    {pageTitle(page)}
-                                  </option>
-                                ))}
-                              </select>
+                                onChange={setParentSlug}
+                                options={[
+                                  { value: "", label: "Ingen" },
+                                  ...formParents.map((page) => ({
+                                    value: page.slug,
+                                    label: pageTitle(page),
+                                  })),
+                                ]}
+                              />
                             </label>
                           )}
                           {panel === "news" ? null : (
@@ -2117,7 +2117,8 @@ export default function AdminPage() {
                             ? undefined
                             : parentSlug || undefined,
                         role: panel === "create" ? createRole || undefined : undefined,
-                        published: structurePage?.published ?? published,
+                        published:
+                          panel === "news" ? published : (structurePage?.published ?? false),
                         links: structurePage?.links ?? [],
                         blocks: structurePage || templatePage ? draftBlocks : [],
                       }}
@@ -2140,28 +2141,27 @@ export default function AdminPage() {
                 <div className="admin-main-actions">
                   <div className="admin-action-row">
                     {structureEditable ? (
-                      <button type="button" className="admin-primary" onClick={saveComponentTemplate}>
+                      <Button type="button" onClick={saveComponentTemplate}>
                         Spara sidmall
-                      </button>
+                      </Button>
                     ) : (
-                      <button
+                      <Button
                         type="button"
-                        className="admin-primary"
                         onClick={() => {
                           if (componentPage) beginTemplateEdit(componentPage);
                         }}
                       >
                         Redigera
-                      </button>
+                      </Button>
                     )}
                     {componentPage ? (
-                      <button
+                      <Button
                         type="button"
-                        className="admin-danger-button"
+                        variant="destructive"
                         onClick={() => openDeleteTemplate(componentPage.slug)}
                       >
                         Ta bort mall
-                      </button>
+                      </Button>
                     ) : null}
                   </div>
                 </div>
@@ -2187,36 +2187,35 @@ export default function AdminPage() {
                 <section aria-label="Komponenter">
                   <label className="admin-pick" htmlFor="component-target">
                     Utgå från
-                    <select
+                    <AdminSelect
                       id="component-target"
                       value={
                         blankMode || !componentPage
                           ? BLANK_TEMPLATE
                           : slugToOption(componentPage.slug)
                       }
-                      onChange={(event) => {
-                        const value = event.target.value;
+                      onChange={(value) => {
                         setComponentTarget(
                           value === BLANK_TEMPLATE ? BLANK_TEMPLATE : optionToSlug(value),
                         );
                         setEditingSlug(null);
                         setNotice(null);
                       }}
-                    >
-                      <option value={BLANK_TEMPLATE}>Blank sida</option>
-                      {templateOptions.map((page) => (
-                        <option key={page.slug || "/"} value={slugToOption(page.slug)}>
-                          {page.parentSlug ? `– ${pageTitle(page)}` : pageTitle(page)}
-                        </option>
-                      ))}
-                    </select>
+                      options={[
+                        { value: BLANK_TEMPLATE, label: "Blank sida" },
+                        ...templateOptions.map((page) => ({
+                          value: slugToOption(page.slug),
+                          label: page.parentSlug ? `– ${pageTitle(page)}` : pageTitle(page),
+                        })),
+                      ]}
+                    />
                   </label>
 
                   {structureEditable ? (
                     <div className="admin-create-fields">
                       <label htmlFor="template-title">
                         Mallnamn
-                        <input
+                        <Input
                           id="template-title"
                           value={blankMode ? blankTitle : editTitle}
                           onChange={(event) =>
@@ -2285,13 +2284,13 @@ export default function AdminPage() {
                                 : ""}
                             </small>
                             <small>{formatDeletedAt(entry.deletedAt)}</small>
-                            <button
+                            <Button
                               type="button"
-                              className="admin-quiet"
+                              variant="outline"
                               onClick={() => restorePage(entry.id)}
                             >
                               Återställ
-                            </button>
+                            </Button>
                           </li>
                         );
                       })}
@@ -2310,13 +2309,13 @@ export default function AdminPage() {
                           <span>{entry.template.title.trim() || entry.template.slug}</span>
                           <small>Mall</small>
                           <small>{formatDeletedAt(entry.deletedAt)}</small>
-                          <button
+                          <Button
                             type="button"
-                            className="admin-quiet"
+                            variant="outline"
                             onClick={() => restoreTemplate(entry.id)}
                           >
                             Återställ
-                          </button>
+                          </Button>
                         </li>
                       ))}
                     </ul>
@@ -2429,40 +2428,45 @@ function PendingBanner({ show }: { show: boolean }) {
   );
 }
 
-function PublishControls({
+function PublishBadge({
   published,
   changed,
   onToggle,
-  onPublish,
-  onDiscard,
 }: {
   published: boolean;
   changed: boolean;
   onToggle: () => void;
-  onPublish: () => void;
-  onDiscard: () => void;
 }) {
   const label = published ? "Publiserad" : "Ej publiserad";
   const statusClass = published ? "admin-publish is-live" : "admin-publish";
+  if (changed) {
+    return <span className={statusClass}>{label}</span>;
+  }
+  return (
+    <button type="button" className={statusClass} aria-pressed={published} onClick={onToggle}>
+      {label}
+    </button>
+  );
+}
+
+function PublishActions({
+  changed,
+  onPublish,
+  onDiscard,
+}: {
+  changed: boolean;
+  onPublish: () => void;
+  onDiscard: () => void;
+}) {
+  if (!changed) return null;
   return (
     <>
-      {changed ? (
-        <span className={statusClass}>{label}</span>
-      ) : (
-        <button type="button" className={statusClass} aria-pressed={published} onClick={onToggle}>
-          {label}
-        </button>
-      )}
-      {changed ? (
-        <>
-          <button type="button" className="admin-primary" onClick={onPublish}>
-            Publicera ändringar
-          </button>
-          <button type="button" className="admin-quiet" onClick={onDiscard}>
-            Ångra
-          </button>
-        </>
-      ) : null}
+      <Button type="button" onClick={onPublish}>
+        Publicera ändringar
+      </Button>
+      <Button type="button" variant="outline" onClick={onDiscard}>
+        Ångra
+      </Button>
     </>
   );
 }
@@ -2688,7 +2692,7 @@ function BlockFieldsEditor({
       <>
         {content ? (
           <AdminField label={fields.body ?? "Liten rad"} issue={bodyIssue}>
-            <textarea
+            <Textarea
               rows={2}
               value={block.body}
               onChange={(event) => onChange({ body: event.target.value })}
@@ -2697,7 +2701,7 @@ function BlockFieldsEditor({
         ) : null}
         {content ? (
           <AdminField label={fields.heading ?? "Rubrik"} issue={headingIssue}>
-            <input
+            <Input
               value={block.heading}
               onChange={(event) => onChange({ heading: event.target.value })}
             />
@@ -2706,15 +2710,16 @@ function BlockFieldsEditor({
         {structure ? (
           <>
             <AdminField label="Knapp" issue={buttonIssue}>
-              <input
+              <Input
                 value={block.buttonLabel ?? ""}
                 onChange={(event) => onChange({ buttonLabel: event.target.value })}
               />
             </AdminField>
             <AdminField label="Länk" issue={hrefIssue}>
-              <input
-                value={block.buttonHref ?? ""}
-                onChange={(event) => onChange({ buttonHref: event.target.value })}
+              <AdminSelect
+                value={savedHref}
+                onChange={(buttonHref) => onChange({ buttonHref })}
+                options={bannerLinkOptions(linkPages, savedHref)}
               />
             </AdminField>
           </>
@@ -2722,7 +2727,6 @@ function BlockFieldsEditor({
         {content ? (
           <ImageField
             src={block.image}
-            emptyLabel="Ingen bild vald."
             chooseLabel={block.image ? "Byt bild" : "Välj bild"}
             issue={imageIssue}
             onChoose={(src) => onImage(src, "image")}
@@ -2732,13 +2736,14 @@ function BlockFieldsEditor({
         {structure ? (
           <label>
             Storlek
-            <select
+            <AdminSelect
               value={block.size === "small" ? "small" : "large"}
-              onChange={(event) => onChange({ size: event.target.value as CmsBlock["size"] })}
-            >
-              <option value="large">Stor</option>
-              <option value="small">Liten</option>
-            </select>
+              onChange={(size) => onChange({ size: size as CmsBlock["size"] })}
+              options={[
+                { value: "large", label: "Stor" },
+                { value: "small", label: "Liten" },
+              ]}
+            />
           </label>
         ) : null}
       </>
@@ -2757,7 +2762,7 @@ function BlockFieldsEditor({
           onChange={(quote) => onChange({ quote })}
         />
         <AdminField label="Källa">
-          <input
+          <Input
             value={block.quoteCredit ?? ""}
             onChange={(event) => onChange({ quoteCredit: event.target.value })}
           />
@@ -2775,55 +2780,38 @@ function BlockFieldsEditor({
       {structure && block.type === "article" && parents ? (
         <label>
           Förälder
-          <select
+          <AdminSelect
             value={block.parentSlug !== undefined ? block.parentSlug : pageParentSlug}
-            onChange={(event) => onChange({ parentSlug: event.target.value })}
-          >
-            <option value="">Ingen</option>
-            {parents.map((page) => (
-              <option key={page.slug || "/"} value={page.slug}>
-                {pageTitle(page)}
-              </option>
-            ))}
-          </select>
+            onChange={(parentSlug) => onChange({ parentSlug })}
+            options={[
+              { value: "", label: "Ingen" },
+              ...parents.map((page) => ({
+                value: page.slug,
+                label: pageTitle(page),
+              })),
+            ]}
+          />
         </label>
       ) : null}
       {structure && fields.theme ? (
-        block.type === "imageText" ? (
-          <div className="admin-theme-row">
-            <ColorSwatch
-              value={resolveTheme(block)}
-              options={swatchesFor(block.type, resolveTheme(block))}
-              onChange={(theme) => onChange({ theme })}
-            />
-            <FieldSwitch
-              label="Figur"
-              stacked
-              checked={block.shape ?? resolveTheme(block) === "mist"}
-              onChange={(shape) => onChange({ shape })}
-            />
-          </div>
-        ) : (
-          <ColorSwatch
-            value={resolveTheme(block)}
-            options={swatchesFor(block.type, resolveTheme(block))}
-            onChange={(theme) => onChange({ theme })}
-          />
-        )
-      ) : null}
-      {structure && usesExpandedTheme(block.type) && block.type !== "imageText" ? (
-        <label className="admin-check">
-          <input
-            type="checkbox"
-            checked={block.shape ?? resolveTheme(block) === "mist"}
-            onChange={(event) => onChange({ shape: event.target.checked })}
-          />
-          Figur
-        </label>
+        <ColorSwatch
+          value={resolveTheme(block)}
+          options={swatchesFor(block.type, resolveTheme(block))}
+          onChange={(theme) => onChange({ theme })}
+          aside={
+            usesExpandedTheme(block.type) ? (
+              <FieldSwitch
+                label="Figur"
+                checked={block.shape ?? resolveTheme(block) === "mist"}
+                onChange={(shape) => onChange({ shape })}
+              />
+            ) : null
+          }
+        />
       ) : null}
       {content && fields.eyebrow ? (
         <AdminField label="Överrad" issue={eyebrowIssue}>
-          <input
+          <Input
             value={block.eyebrow ?? ""}
             onChange={(event) => onChange({ eyebrow: event.target.value })}
           />
@@ -2832,7 +2820,7 @@ function BlockFieldsEditor({
       {content && fields.heading ? (
         block.type === "text" ? (
           <AdminField label={fields.heading} issue={headingIssue}>
-            <textarea
+            <Textarea
               rows={4}
               value={block.heading}
               onChange={(event) => onChange({ heading: event.target.value })}
@@ -2840,7 +2828,7 @@ function BlockFieldsEditor({
           </AdminField>
         ) : (
           <AdminField label={fields.heading} issue={headingIssue}>
-            <input
+            <Input
               value={block.heading}
               onChange={(event) => onChange({ heading: event.target.value })}
             />
@@ -2850,33 +2838,33 @@ function BlockFieldsEditor({
       {content && block.type === "contact" ? (
         <>
           <AdminField label="Namn">
-            <input
+            <Input
               value={block.contactName ?? ""}
               onChange={(event) => onChange({ contactName: event.target.value })}
             />
           </AdminField>
           <AdminField label="Titel">
-            <input
+            <Input
               value={block.contactTitle ?? ""}
               onChange={(event) => onChange({ contactTitle: event.target.value })}
             />
           </AdminField>
           <AdminField label="Mailadress">
-            <input
+            <Input
               type="email"
               value={block.contactEmail ?? ""}
               onChange={(event) => onChange({ contactEmail: event.target.value })}
             />
           </AdminField>
           <AdminField label="Telefonnummer">
-            <input
+            <Input
               type="tel"
               value={block.contactPhone ?? ""}
               onChange={(event) => onChange({ contactPhone: event.target.value })}
             />
           </AdminField>
           <AdminField label="LinkedIn">
-            <input
+            <Input
               value={block.contactLinkedIn ?? ""}
               onChange={(event) => onChange({ contactLinkedIn: event.target.value })}
             />
@@ -2888,7 +2876,7 @@ function BlockFieldsEditor({
           label="Publiceringsdatum"
           issue={findCompletenessIssue(issues, "publishedAt", block.id)}
         >
-          <input
+          <Input
             type="date"
             value={block.publishedAt ?? ""}
             onChange={(event) => onChange({ publishedAt: event.target.value })}
@@ -2899,7 +2887,7 @@ function BlockFieldsEditor({
         block.type === "article" ? (
           <FormattedText
             label={fields.body}
-            rows={8}
+            rows={18}
             value={block.body}
             issue={bodyIssue}
             lines
@@ -2907,7 +2895,7 @@ function BlockFieldsEditor({
           />
         ) : (
           <AdminField label={fields.body} issue={bodyIssue}>
-            <textarea
+            <Textarea
               rows={block.type === "statement" ? 6 : 5}
               value={block.body}
               onChange={(event) => onChange({ body: event.target.value })}
@@ -2917,115 +2905,107 @@ function BlockFieldsEditor({
       ) : null}
       {structure && block.type === "hero" ? (
         <>
-          <label className="admin-check">
-            <input
-              type="checkbox"
-              checked={block.shape === true}
-              onChange={(event) => onChange({ shape: event.target.checked ? true : undefined })}
-            />
-            Vector
-          </label>
+          <FieldSwitch
+            label="Vector"
+            checked={block.shape === true}
+            onChange={(shape) => onChange({ shape: shape ? true : undefined })}
+          />
           <AdminField label="Knapp">
-            <input
+            <Input
               value={block.buttonLabel ?? ""}
               onChange={(event) => onChange({ buttonLabel: event.target.value })}
             />
           </AdminField>
           <AdminField label="Sida">
-            <select
+            <AdminSelect
               value={block.buttonHref ?? ""}
-              onChange={(event) => onChange({ buttonHref: event.target.value })}
-            >
-              <option value="">Ingen sida</option>
-              {(pages ?? []).map((page) => (
-                <option key={page.slug || "/"} value={`/${page.slug}`}>
-                  {pageTitle(page)}
-                </option>
-              ))}
-            </select>
+              onChange={(buttonHref) => onChange({ buttonHref })}
+              options={[
+                { value: "", label: "Ingen sida" },
+                ...(pages ?? []).map((page) => ({
+                  value: `/${page.slug}`,
+                  label: pageTitle(page),
+                })),
+              ]}
+            />
           </AdminField>
           <AdminField label="Knapp 2">
-            <input
+            <Input
               value={block.button2Label ?? ""}
               onChange={(event) => onChange({ button2Label: event.target.value })}
             />
           </AdminField>
           <AdminField label="Sida">
-            <select
+            <AdminSelect
               value={block.button2Href ?? ""}
-              onChange={(event) => onChange({ button2Href: event.target.value })}
-            >
-              <option value="">Ingen sida</option>
-              {(pages ?? []).map((page) => (
-                <option key={`2-${page.slug || "/"}`} value={`/${page.slug}`}>
-                  {pageTitle(page)}
-                </option>
-              ))}
-            </select>
+              onChange={(button2Href) => onChange({ button2Href })}
+              options={[
+                { value: "", label: "Ingen sida" },
+                ...(pages ?? []).map((page) => ({
+                  value: `/${page.slug}`,
+                  label: pageTitle(page),
+                })),
+              ]}
+            />
           </AdminField>
         </>
       ) : null}
       {content && fields.quote ? (
         <>
-          <label className="admin-check">
-            <input
-              type="checkbox"
-              checked={block.quote !== undefined}
-              onChange={(event) =>
-                onChange({
-                  quote: event.target.checked ? block.quote ?? "" : undefined,
-                  quoteAfter: event.target.checked ? block.quoteAfter ?? 0 : undefined,
-                  quoteCredit: event.target.checked ? (block.quoteCredit ?? "") : undefined,
-                })
-              }
-            />
-            Citat i texten
-          </label>
+          <FieldSwitch
+            label="Citat i texten"
+            checked={block.quote !== undefined}
+            onChange={(enabled) =>
+              onChange({
+                quote: enabled ? block.quote ?? "" : undefined,
+                quoteAfter: enabled ? block.quoteAfter ?? 0 : undefined,
+                quoteCredit: enabled ? (block.quoteCredit ?? "") : undefined,
+              })
+            }
+          />
           {quoteFields}
         </>
       ) : null}
       {structure && block.type === "statement" ? (
         <label>
           Justering
-          <select
+          <AdminSelect
             value={block.align ?? "center"}
-            onChange={(event) => onChange({ align: event.target.value as CmsBlock["align"] })}
-          >
-            <option value="left">Vänster</option>
-            <option value="center">Centrerad</option>
-            <option value="right">Höger</option>
-          </select>
+            onChange={(align) => onChange({ align: align as CmsBlock["align"] })}
+            options={[
+              { value: "left", label: "Vänster" },
+              { value: "center", label: "Centrerad" },
+              { value: "right", label: "Höger" },
+            ]}
+          />
         </label>
       ) : null}
       {structure && fields.button && block.type === "statement" ? (
         <>
-          <label className="admin-check">
-            <input
-              type="checkbox"
-              checked={block.buttonLabel !== undefined}
-              onChange={(event) =>
-                onChange(
-                  event.target.checked
-                    ? {
-                        buttonLabel: block.buttonLabel || "Contact us",
-                        buttonHref: block.buttonHref || "/#kontakt",
-                      }
-                    : { buttonLabel: undefined, buttonHref: undefined },
-                )
-              }
-            />
-            Knapp
-          </label>
+          <FieldSwitch
+            label="Knapp"
+            checked={block.buttonLabel !== undefined}
+            onChange={(enabled) =>
+              onChange(
+                enabled
+                  ? {
+                      buttonLabel: block.buttonLabel || "Contact us",
+                      buttonHref: block.buttonHref || "/#kontakt",
+                    }
+                  : { buttonLabel: undefined, buttonHref: undefined },
+              )
+            }
+          />
           {block.buttonLabel !== undefined ? (
             <>
               <AdminField label="Knapp" issue={buttonIssue}>
-                <input
+                <Input
                   value={block.buttonLabel}
                   onChange={(event) => onChange({ buttonLabel: event.target.value })}
                 />
               </AdminField>
               <AdminField label="Länk" issue={hrefIssue}>
-                <input
+                <Input
                   value={block.buttonHref ?? ""}
                   onChange={(event) => onChange({ buttonHref: event.target.value })}
                 />
@@ -3037,23 +3017,23 @@ function BlockFieldsEditor({
       {structure && fields.button && (block.type === "contactCards" || block.type === "contactUs") ? (
         <>
           <AdminField label="Knapp">
-            <input
+            <Input
               value={block.buttonLabel ?? ""}
               onChange={(event) => onChange({ buttonLabel: event.target.value })}
             />
           </AdminField>
           <AdminField label="Sida">
-            <select
+            <AdminSelect
               value={block.buttonHref ?? ""}
-              onChange={(event) => onChange({ buttonHref: event.target.value })}
-            >
-              <option value="">Ingen sida</option>
-              {(pages ?? []).map((page) => (
-                <option key={page.slug || "/"} value={`/${page.slug}`}>
-                  {pageTitle(page)}
-                </option>
-              ))}
-            </select>
+              onChange={(buttonHref) => onChange({ buttonHref })}
+              options={[
+                { value: "", label: "Ingen sida" },
+                ...(pages ?? []).map((page) => ({
+                  value: `/${page.slug}`,
+                  label: pageTitle(page),
+                })),
+              ]}
+            />
           </AdminField>
         </>
       ) : null}
@@ -3076,26 +3056,24 @@ function BlockFieldsEditor({
           {block.buttonLabel !== undefined ? (
             <>
               <AdminField label="Knapp" issue={buttonIssue}>
-                <input
+                <Input
                   value={block.buttonLabel}
                   onChange={(event) => onChange({ buttonLabel: event.target.value })}
                 />
               </AdminField>
               <AdminField label="Länk" issue={hrefIssue}>
-                <select
+                <AdminSelect
                   value={savedHref}
-                  onChange={(event) => onChange({ buttonHref: event.target.value })}
-                >
-                  <option value="">Ingen sida</option>
-                  {savedHref && !savedHrefListed ? (
-                    <option value={savedHref}>{savedHref}</option>
-                  ) : null}
-                  {linkPages.map((page) => (
-                    <option key={page.slug || "/"} value={`/${page.slug}`}>
-                      {pageTitle(page)}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(buttonHref) => onChange({ buttonHref })}
+                  options={[
+                    { value: "", label: "Ingen sida" },
+                    ...(savedHref && !savedHrefListed ? [{ value: savedHref, label: savedHref }] : []),
+                    ...linkPages.map((page) => ({
+                      value: `/${page.slug}`,
+                      label: pageTitle(page),
+                    })),
+                  ]}
+                />
               </AdminField>
             </>
           ) : null}
@@ -3109,27 +3087,27 @@ function BlockFieldsEditor({
       block.type !== "contactUs" ? (
         <>
           <AdminField label="Knapp" issue={buttonIssue}>
-            <input
+            <Input
               value={block.buttonLabel ?? ""}
               onChange={(event) => onChange({ buttonLabel: event.target.value })}
             />
           </AdminField>
           <AdminField label="Länk" issue={hrefIssue}>
             {pageLinkSelect ? (
-              <select
+              <AdminSelect
                 value={savedHref}
-                onChange={(event) => onChange({ buttonHref: event.target.value })}
-              >
-                <option value="">Ingen sida</option>
-                {savedHref && !savedHrefListed ? <option value={savedHref}>{savedHref}</option> : null}
-                {linkPages.map((page) => (
-                  <option key={page.slug || "/"} value={`/${page.slug}`}>
-                    {pageTitle(page)}
-                  </option>
-                ))}
-              </select>
+                onChange={(buttonHref) => onChange({ buttonHref })}
+                options={[
+                  { value: "", label: "Ingen sida" },
+                  ...(savedHref && !savedHrefListed ? [{ value: savedHref, label: savedHref }] : []),
+                  ...linkPages.map((page) => ({
+                    value: `/${page.slug}`,
+                    label: pageTitle(page),
+                  })),
+                ]}
+              />
             ) : (
-              <input
+              <Input
                 value={block.buttonHref ?? ""}
                 onChange={(event) => onChange({ buttonHref: event.target.value })}
               />
@@ -3142,27 +3120,29 @@ function BlockFieldsEditor({
           {fields.imageSide ? (
             <label>
               Bildsida
-              <select
+              <AdminSelect
                 value={block.imageSide ?? "left"}
-                onChange={(event) =>
-                  onChange({ imageSide: event.target.value as CmsBlock["imageSide"] })
+                onChange={(imageSide) =>
+                  onChange({ imageSide: imageSide as CmsBlock["imageSide"] })
                 }
-              >
-                <option value="left">Vänster</option>
-                <option value="right">Höger</option>
-              </select>
+                options={[
+                  { value: "left", label: "Vänster" },
+                  { value: "right", label: "Höger" },
+                ]}
+              />
             </label>
           ) : null}
           {fields.align ? (
             <label>
               Justering
-              <select
+              <AdminSelect
                 value={block.align ?? "left"}
-                onChange={(event) => onChange({ align: event.target.value as CmsBlock["align"] })}
-              >
-                <option value="left">Vänster</option>
-                <option value="center">Centrerad</option>
-              </select>
+                onChange={(align) => onChange({ align: align as CmsBlock["align"] })}
+                options={[
+                  { value: "left", label: "Vänster" },
+                  { value: "center", label: "Centrerad" },
+                ]}
+              />
             </label>
           ) : null}
         </div>
@@ -3170,7 +3150,6 @@ function BlockFieldsEditor({
       {content && fields.image ? (
         <ImageField
           src={block.image}
-          emptyLabel="Ingen bild vald."
           chooseLabel={block.image ? "Byt bild" : "Välj bild"}
           issue={imageIssue}
           onChoose={(src) => onImage(src, "image")}
@@ -3180,7 +3159,6 @@ function BlockFieldsEditor({
       {content && fields.image2 ? (
         <ImageField
           src={block.image2}
-          emptyLabel="Ingen andra bild vald."
           chooseLabel={block.image2 ? "Byt andra bilden" : "Välj andra bilden"}
           issue={image2Issue}
           onChoose={(src) => onImage(src, "image2")}
@@ -3278,7 +3256,7 @@ function DeletePageDialog({
         </p>
         <label>
           {mode === "news" ? "Rubrik" : mode === "template" ? "Mallnamn" : "Adress"}
-          <input
+          <Input
             ref={inputRef}
             value={value}
             onChange={(event) => onChange(event.target.value)}
@@ -3288,12 +3266,12 @@ function DeletePageDialog({
           />
         </label>
         <div className="admin-modal-actions">
-          <button type="button" className="admin-quiet" onClick={onCancel}>
+          <Button type="button" variant="outline" onClick={onCancel}>
             Avbryt
-          </button>
-          <button type="submit" className="admin-danger-button" disabled={!matches}>
+          </Button>
+          <Button type="submit" variant="destructive" disabled={!matches}>
             {mode === "news" ? "Ta bort nyhet" : mode === "template" ? "Ta bort mall" : "Ta bort sida"}
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -3553,15 +3531,18 @@ function FormattedText({
       <span>{label}</span>
       {lines && format ? (
         <div className="admin-format-bar">
-          <select
+          <AdminSelect
             aria-label="Textstil"
             value={format.style}
             onPointerDown={rememberSelection}
-            onChange={(event) => formatStyle(event.target.value as TextStyle)}
-          >
-            <option value="normal">Normal</option>
-            <option value="heading">Rubrik</option>
-          </select>
+            onChange={(style) => formatStyle(style as TextStyle)}
+            size="sm"
+            className="w-auto border-0 shadow-none bg-transparent"
+            options={[
+              { value: "normal", label: "Normal" },
+              { value: "heading", label: "Rubrik" },
+            ]}
+          />
           <span className="admin-format-rule" aria-hidden="true" />
           <button
             type="button"
@@ -3646,7 +3627,7 @@ function FormattedText({
           </button>
         </div>
       )}
-      <textarea
+      <Textarea
         ref={fieldRef}
         rows={rows}
         value={value}
@@ -3741,16 +3722,11 @@ function QuotePlacement({
   return (
     <label>
       Placering
-      <select
+      <AdminSelect
         value={selected}
-        onChange={(event) => onChange(parseQuotePlacement(event.target.value))}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+        onChange={(next) => onChange(parseQuotePlacement(next))}
+        options={options}
+      />
     </label>
   );
 }
@@ -3798,7 +3774,7 @@ function TextColumnSections({
                   label="Rubrik"
                   issue={findCompletenessIssue(issues, "heading", blockId, item.id)}
                 >
-                  <input
+                  <Input
                     value={item.heading}
                     onChange={(event) => patch(item.id, { heading: event.target.value })}
                   />
@@ -3870,7 +3846,7 @@ function ExpertiseCards({
                   label="Rubrik"
                   issue={findCompletenessIssue(issues, "heading", blockId, item.id)}
                 >
-                  <input
+                  <Input
                     value={item.heading}
                     onChange={(event) => patch(item.id, { heading: event.target.value })}
                   />
@@ -3879,7 +3855,7 @@ function ExpertiseCards({
                   label="Text"
                   issue={findCompletenessIssue(issues, "body", blockId, item.id)}
                 >
-                  <textarea
+                  <Textarea
                     rows={4}
                     value={item.body}
                     onChange={(event) => patch(item.id, { body: event.target.value })}
@@ -3892,17 +3868,17 @@ function ExpertiseCards({
                 label="Undersida"
                 issue={findCompletenessIssue(issues, "href", blockId, item.id)}
               >
-                <select
+                <AdminSelect
                   value={item.href}
-                  onChange={(event) => patch(item.id, { href: event.target.value })}
-                >
-                  <option value="">Ingen sida</option>
-                  {pages.map((page) => (
-                    <option key={page.slug || "/"} value={`/${page.slug}`}>
-                      {page.title}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(href) => patch(item.id, { href })}
+                  options={[
+                    { value: "", label: "Ingen sida" },
+                    ...pages.map((page) => ({
+                      value: `/${page.slug}`,
+                      label: page.title,
+                    })),
+                  ]}
+                />
               </AdminField>
             ) : null}
           </li>
@@ -3930,15 +3906,18 @@ function PageChoice({
 }) {
   return (
     <AdminField label="Länk">
-      <select value={value} onChange={(event) => onChange(event.target.value)}>
-        <option value="">Välj sida</option>
-        {value && !pageHrefs.has(value) ? <option value={value}>{value}</option> : null}
-        {pages.map((page) => (
-          <option key={page.slug || "/"} value={`/${page.slug}`}>
-            {page.parentSlug ? `– ${pageTitle(page)}` : pageTitle(page)}
-          </option>
-        ))}
-      </select>
+      <AdminSelect
+        value={value}
+        onChange={onChange}
+        options={[
+          { value: "", label: "Välj sida" },
+          ...(value && !pageHrefs.has(value) ? [{ value, label: value }] : []),
+          ...pages.map((page) => ({
+            value: `/${page.slug}`,
+            label: page.parentSlug ? `– ${pageTitle(page)}` : pageTitle(page),
+          })),
+        ]}
+      />
     </AdminField>
   );
 }
@@ -3999,7 +3978,7 @@ function MenuRows({
               </div>
             </div>
             <AdminField label="Rubrik">
-              <input
+              <Input
                 value={item.label}
                 onChange={(event) => patch(index, { label: event.target.value })}
               />
@@ -4053,7 +4032,7 @@ function MenuRows({
                       </div>
                     </div>
                     <AdminField label="Rubrik">
-                      <input
+                      <Input
                         value={child.label}
                         onChange={(event) =>
                           patch(index, {
@@ -4133,39 +4112,38 @@ function ContactCards({
               <>
                 <ImageField
                   src={item.image}
-                  emptyLabel="Ingen bild vald."
                   chooseLabel={item.image ? "Byt bild" : "Välj bild"}
                   onChoose={(src) => patch(item.id, { image: src })}
                   onClear={() => patch(item.id, { image: "" })}
                 />
                 <AdminField label="Namn">
-                  <input
+                  <Input
                     value={item.contactName ?? ""}
                     onChange={(event) => patch(item.id, { contactName: event.target.value })}
                   />
                 </AdminField>
                 <AdminField label="Titel">
-                  <input
+                  <Input
                     value={item.contactTitle ?? ""}
                     onChange={(event) => patch(item.id, { contactTitle: event.target.value })}
                   />
                 </AdminField>
                 <AdminField label="Mailadress">
-                  <input
+                  <Input
                     type="email"
                     value={item.contactEmail ?? ""}
                     onChange={(event) => patch(item.id, { contactEmail: event.target.value })}
                   />
                 </AdminField>
                 <AdminField label="Telefonnummer">
-                  <input
+                  <Input
                     type="tel"
                     value={item.contactPhone ?? ""}
                     onChange={(event) => patch(item.id, { contactPhone: event.target.value })}
                   />
                 </AdminField>
                 <AdminField label="LinkedIn">
-                  <input
+                  <Input
                     value={item.contactLinkedIn ?? ""}
                     onChange={(event) => patch(item.id, { contactLinkedIn: event.target.value })}
                   />
@@ -4262,7 +4240,7 @@ function OfferingRows({
                   label="Rubrik"
                   issue={findCompletenessIssue(issues, "heading", blockId, item.id)}
                 >
-                  <input
+                  <Input
                     value={item.heading}
                     onChange={(event) => patch(item.id, { heading: event.target.value })}
                   />
@@ -4271,7 +4249,7 @@ function OfferingRows({
                   label="Text"
                   issue={findCompletenessIssue(issues, "body", blockId, item.id)}
                 >
-                  <textarea
+                  <Textarea
                     rows={4}
                     value={item.body}
                     onChange={(event) => patch(item.id, { body: event.target.value })}
@@ -4285,7 +4263,7 @@ function OfferingRows({
                   label="Knapp"
                   issue={findCompletenessIssue(issues, "buttonLabel", blockId, item.id)}
                 >
-                  <input
+                  <Input
                     value={item.buttonLabel ?? ""}
                     onChange={(event) => patch(item.id, { buttonLabel: event.target.value })}
                   />
@@ -4294,17 +4272,17 @@ function OfferingRows({
                   label="Undersida"
                   issue={findCompletenessIssue(issues, "href", blockId, item.id)}
                 >
-                  <select
+                  <AdminSelect
                     value={item.href}
-                    onChange={(event) => patch(item.id, { href: event.target.value })}
-                  >
-                    <option value="">Ingen sida</option>
-                    {pages.map((page) => (
-                      <option key={page.slug || "/"} value={`/${page.slug}`}>
-                        {page.title}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(href) => patch(item.id, { href })}
+                    options={[
+                      { value: "", label: "Ingen sida" },
+                      ...pages.map((page) => ({
+                        value: `/${page.slug}`,
+                        label: page.title,
+                      })),
+                    ]}
+                  />
                 </AdminField>
               </>
             ) : null}
@@ -4377,27 +4355,32 @@ function ColorSwatch({
   value,
   onChange,
   options,
+  aside,
 }: {
   value: BlockTheme;
   onChange: (theme: BlockTheme) => void;
   options: { id: BlockTheme; label: string; color: string }[];
+  aside?: ReactNode;
 }) {
   return (
     <fieldset className="admin-swatches">
       <legend>Bakgrund</legend>
-      <div>
-        {options.map((theme) => (
-          <button
-            key={theme.id}
-            type="button"
-            className={value === theme.id ? "is-active" : undefined}
-            style={{ background: theme.color }}
-            aria-pressed={value === theme.id}
-            aria-label={theme.label}
-            title={theme.label}
-            onClick={() => onChange(theme.id)}
-          />
-        ))}
+      <div className="admin-swatch-line">
+        <div className="admin-swatch-dots">
+          {options.map((theme) => (
+            <button
+              key={theme.id}
+              type="button"
+              className={value === theme.id ? "is-active" : undefined}
+              style={{ background: theme.color }}
+              aria-pressed={value === theme.id}
+              aria-label={theme.label}
+              title={theme.label}
+              onClick={() => onChange(theme.id)}
+            />
+          ))}
+        </div>
+        {aside}
       </div>
     </fieldset>
   );
@@ -4405,14 +4388,12 @@ function ColorSwatch({
 
 function ImageField({
   src,
-  emptyLabel,
   chooseLabel,
   issue,
   onChoose,
   onClear,
 }: {
   src?: string;
-  emptyLabel: string;
   chooseLabel: string;
   issue?: CompletenessIssue;
   onChoose: (src: string) => void;
@@ -4489,22 +4470,22 @@ function ImageField({
       className={issue ? "admin-image is-invalid" : "admin-image"}
       ref={rootRef}
     >
-      {src ? <img src={src} alt="" /> : <p>{emptyLabel}</p>}
+      {src ? <img src={src} alt="" /> : null}
       <div>
-        <button
+        <Button
           type="button"
-          className="admin-file"
+          variant="outline"
           aria-expanded={open}
           aria-invalid={issue ? true : undefined}
           aria-describedby={issue ? `${issue.id}-error` : undefined}
           onClick={() => setOpen((current) => !current)}
         >
           {chooseLabel}
-        </button>
+        </Button>
         {src ? (
-          <button type="button" onClick={onClear}>
+          <Button type="button" variant="outline" onClick={onClear}>
             Ta bort bild
-          </button>
+          </Button>
         ) : null}
       </div>
       {issue ? (
@@ -4610,13 +4591,13 @@ function DeleteBlobDialog({
         )}
         <img className="admin-blob-confirm" src={url} alt="" />
         <div className="admin-modal-actions">
-          <button type="button" className="admin-quiet" disabled={deleting} onClick={onCancel}>
+          <Button type="button" variant="outline" disabled={deleting} onClick={onCancel}>
             {blocked ? "Stäng" : "Avbryt"}
-          </button>
+          </Button>
           {blocked ? null : (
-            <button type="button" className="admin-danger-button" disabled={deleting} onClick={onConfirm}>
+            <Button type="button" variant="destructive" disabled={deleting} onClick={onConfirm}>
               {deleting ? "Tar bort…" : "Ta bort bild"}
-            </button>
+            </Button>
           )}
         </div>
       </div>

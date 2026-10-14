@@ -42,7 +42,8 @@ Call `themesFor(blockType)` for the swatch list.
 - **contact, imagePair, contactUs:** sand, coral, sage, slate, steel, ink (Navy), fog (Warm gray), mist, linen, ice, blush
 - **text, article, sectionHeader:** white, fog, mist, linen, blush, sand
 - **statement:** the light list plus ink, charcoal (Dark gray), rust
-- **expertise, offering, news, newsTwelve, textColumn, pageHeader, hero, banner:** no swatch. Expertise stays blush with rust heading. Hero and banner stay image plus dark shade.
+- **pageHeader:** every module background, plus white and the footer color (charcoal). Logo and menu switch to the light marks on dark surfaces.
+- **expertise, offering, news, newsTwelve, textColumn, hero, banner:** no swatch. Expertise stays blush with rust heading. Hero and banner stay image plus dark shade.
 
 Existing stored themes that fall outside the list still render via `.cms-theme-*`. `swatchesFor(type, current)` keeps the current value visible.
 

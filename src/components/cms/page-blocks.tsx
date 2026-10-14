@@ -102,7 +102,7 @@ function BlockView({
   articleItems: CmsCard[];
 }) {
   if (block.type === "pageHeader") {
-    return <Header variant="bar" items={menu} />;
+    return <Header variant="bar" items={menu} theme={resolveTheme(block)} />;
   }
 
   if (block.type === "hero") {

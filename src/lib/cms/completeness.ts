@@ -162,7 +162,14 @@ function blockCompletenessIssues(block: CmsBlock): CompletenessIssue[] {
       issues.push(blockIssue(block, "buttonLabel", "Fyll i knapp", "fyll i knapp"));
     }
     if (blank(block.buttonHref)) {
-      issues.push(blockIssue(block, "buttonHref", "Fyll i länk", "fyll i länk"));
+      issues.push(
+        blockIssue(
+          block,
+          "buttonHref",
+          block.type === "banner" ? "Välj sida" : "Fyll i länk",
+          block.type === "banner" ? "välj sida" : "fyll i länk",
+        ),
+      );
     }
   }
 

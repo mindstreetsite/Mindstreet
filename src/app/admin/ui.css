@@ -1,0 +1,49 @@
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@import "tw-animate-css";
+
+@source "../../components/ui/**/*.{ts,tsx}";
+@source "../../components/admin/**/*.{ts,tsx}";
+@source "./page.tsx";
+
+@theme inline {
+  --color-background: var(--ui-background);
+  --color-foreground: var(--ui-foreground);
+  --color-card: var(--ui-background);
+  --color-card-foreground: var(--ui-foreground);
+  --color-popover: var(--ui-background);
+  --color-popover-foreground: var(--ui-foreground);
+  --color-primary: var(--ui-primary);
+  --color-primary-foreground: var(--ui-primary-foreground);
+  --color-secondary: var(--ui-secondary);
+  --color-secondary-foreground: var(--ui-foreground);
+  --color-muted: var(--ui-muted);
+  --color-muted-foreground: var(--ui-muted-foreground);
+  --color-accent: var(--ui-accent);
+  --color-accent-foreground: var(--ui-foreground);
+  --color-destructive: var(--ui-destructive);
+  --color-border: var(--ui-border);
+  --color-input: var(--ui-border);
+  --color-ring: var(--ui-ring);
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+}
+
+:root,
+.admin,
+.admin-gate {
+  --ui-background: var(--paper);
+  --ui-foreground: var(--text);
+  --ui-primary: var(--navy);
+  --ui-primary-foreground: var(--on-dark);
+  --ui-secondary: var(--paper);
+  --ui-muted: var(--fog);
+  --ui-muted-foreground: var(--text-muted);
+  --ui-accent: var(--fog);
+  --ui-destructive: var(--danger);
+  --ui-border: var(--border);
+  --ui-ring: var(--navy);
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Root, Thumb } from "@radix-ui/react-switch";
+import { Switch as UiSwitch } from "@/components/ui/switch";
 
 export function Switch({
   checked,
@@ -9,9 +9,5 @@ export function Switch({
   checked: boolean;
   onChange: (checked: boolean) => void;
 }) {
-  return (
-    <Root className="admin-switch-control" checked={checked} onCheckedChange={onChange}>
-      <Thumb className="admin-switch-thumb" />
-    </Root>
-  );
+  return <UiSwitch checked={checked} onCheckedChange={onChange} />;
 }

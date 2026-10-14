@@ -120,6 +120,9 @@ const textSurfaces: BlockTheme[] = ["white", "fog", "mist", "linen", "blush", "s
 
 const statementSurfaces: BlockTheme[] = [...textSurfaces, "ink", "charcoal", "rust"];
 
+/** Background swatches, white, and the footer color (charcoal). */
+const pageHeaderSurfaces: BlockTheme[] = [...moduleSurfaces, "white", "charcoal", "rust"];
+
 const themesByType: Partial<Record<BlockType, BlockTheme[]>> = {
   imageText: imageTextSurfaces,
   contact: moduleSurfaces,
@@ -129,6 +132,7 @@ const themesByType: Partial<Record<BlockType, BlockTheme[]>> = {
   article: textSurfaces,
   sectionHeader: textSurfaces,
   statement: statementSurfaces,
+  pageHeader: pageHeaderSurfaces,
 };
 
 function surfacesFor(ids: BlockTheme[]): Surface[] {

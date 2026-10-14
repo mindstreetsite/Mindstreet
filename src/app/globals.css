@@ -210,8 +210,12 @@ p {
 
 .site-header.is-bar {
   position: relative;
-  background: #fff;
+  background: var(--header-surface, var(--white));
   padding: 47px 52px 40px var(--gutter);
+}
+
+.site-header.is-on-dark :focus-visible {
+  outline-color: var(--on-dark);
 }
 
 .logo-link,

@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { menuItems } from "@/content/home";
+import { onDark, surfaceById } from "@/lib/design/palette";
+import type { BlockTheme } from "@/lib/cms/types";
 
 export function Header({
   variant = "overlay",
   items,
+  theme,
 }: {
   variant?: "overlay" | "bar";
+  theme?: BlockTheme;
   items?: { label: string; href: string; children?: { label: string; href: string }[] }[];
 }) {
   const headerRef = useRef<HTMLElement>(null);
@@ -20,6 +24,8 @@ export function Header({
   const openedRef = useRef(false);
   const openFrameRef = useRef(0);
   const bar = variant === "bar";
+  const surface = theme ? surfaceById(theme) : undefined;
+  const lightMarks = surface ? surface.on === onDark : !bar;
   const configured = (items ?? [])
     .map((item) => ({
       label: item.label.trim(),
@@ -162,10 +168,22 @@ export function Header({
 
   return (
     <>
-      <header ref={headerRef} className={bar ? "site-header is-bar" : "site-header"}>
+      <header
+        ref={headerRef}
+        className={
+          bar
+            ? `site-header is-bar${surface ? ` cms-theme-${surface.id}` : ""}${lightMarks ? " is-on-dark" : ""}`
+            : "site-header"
+        }
+        style={
+          surface
+            ? ({ "--header-surface": surface.color } as CSSProperties)
+            : undefined
+        }
+      >
         <a href={bar ? "/" : "#top"} className="logo-link">
           <img
-            src={bar ? "/icons/logo-gray.svg" : "/icons/logo.svg"}
+            src={lightMarks ? "/icons/logo.svg" : "/icons/logo-gray.svg"}
             width={239}
             height={46}
             alt="Mindstreet"
@@ -180,7 +198,7 @@ export function Header({
           onClick={openMenu}
         >
           <img
-            src={bar ? "/icons/menu-gray.svg" : "/icons/menu.svg"}
+            src={lightMarks ? "/icons/menu.svg" : "/icons/menu-gray.svg"}
             width={37.41}
             height={32}
             alt=""
