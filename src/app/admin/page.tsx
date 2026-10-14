@@ -2439,11 +2439,11 @@ function PublishBadge({
 }) {
   const label = published ? "Publiserad" : "Ej publiserad";
   const statusClass = published ? "admin-publish is-live" : "admin-publish";
-  if (changed) {
+  if (published || changed) {
     return <span className={statusClass}>{label}</span>;
   }
   return (
-    <button type="button" className={statusClass} aria-pressed={published} onClick={onToggle}>
+    <button type="button" className={statusClass} onClick={onToggle}>
       {label}
     </button>
   );
