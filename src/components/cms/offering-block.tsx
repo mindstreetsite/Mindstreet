@@ -1,6 +1,7 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { HeadingText, RichText } from "@/lib/cms/inline";
 import type { CmsCard } from "@/lib/cms/types";
 
 export function OfferingPanel({
@@ -60,13 +61,23 @@ export function OfferingPanel({
   );
 }
 
-export function OfferingBlock({ heading, items }: { heading: string; items: CmsCard[] }) {
+export function OfferingBlock({
+  heading,
+  items,
+  className,
+  style,
+}: {
+  heading: string;
+  items: CmsCard[];
+  className?: string;
+  style?: CSSProperties;
+}) {
   const [openId, setOpenId] = useState("");
 
   return (
-    <section className="offering">
+    <section className={className ?? "offering"} style={style}>
       <div className="section-inner">
-        {heading ? <h2>{heading}</h2> : null}
+        {heading ? <HeadingText text={heading} as="h2" /> : null}
         <div className="offering-list">
           {items.map((item) => {
             const isOpen = openId === item.id;
@@ -83,13 +94,15 @@ export function OfferingBlock({ heading, items }: { heading: string; items: CmsC
                     aria-controls={hasPanel ? panelId : undefined}
                     onClick={() => setOpenId(isOpen ? "" : item.id)}
                   >
-                    <span>{item.heading}</span>
+                    <span>
+                      <HeadingText text={item.heading} as="span" />
+                    </span>
                     <span className="plus" aria-hidden="true" />
                   </button>
                 </h3>
                 {hasPanel ? (
                   <OfferingPanel open={isOpen} id={panelId}>
-                    {item.body ? <p>{item.body}</p> : null}
+                    {item.body ? <RichText text={item.body} /> : null}
                     {buttonLabel || href ? (
                       <a className="btn offering-link" href={href || "#"}>
                         {buttonLabel || "Read more"}

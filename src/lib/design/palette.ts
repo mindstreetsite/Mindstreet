@@ -1,4 +1,4 @@
-import type { BlockTheme, BlockType } from "@/lib/cms/types";
+import type { BlockTheme, BlockType, TextColor } from "@/lib/cms/types";
 
 /** Primitive values from the Figma Test-page palette. Keep in sync with :root in globals.css. */
 export const color = {
@@ -7,6 +7,7 @@ export const color = {
   fog: "#E8E7E7",
   charcoal: "#3A3A45",
   rust: "#955035",
+  brown: "#B37C55",
   sage: "#719F8D",
   coral: "#E37C64",
   sand: "rgba(205, 183, 151, 0.5)",
@@ -69,12 +70,13 @@ export const surfaces: Surface[] = [
   surface("coralTint", "Coral (tunn)", color.coralTint),
   surface("coral", "Coral", color.coral),
   surface("sage", "Sage", color.sage),
-  surface("linen", "Linen", color.linen),
-  surface("ink", "Navy", color.navy),
-  surface("steel", "Steel blue", color.steel),
-  surface("fog", "Warm gray", color.fog),
-  surface("charcoal", "Dark gray", color.charcoal),
-  surface("rust", "Rust", color.rust),
+  surface("linen", "Linne", color.linen),
+  surface("ink", "Marinblå", color.navy),
+  surface("steel", "Stålblå", color.steel),
+  surface("fog", "Varmgrå", color.fog),
+  surface("charcoal", "Mörkgrå", color.charcoal),
+  surface("rust", "Rost", color.rust),
+  surface("brown", "Brun", color.brown),
   surface("ice", "Ice", color.ice),
   surface("blush", "Blush", color.blush),
 ];
@@ -114,6 +116,26 @@ const moduleSurfaces: BlockTheme[] = [
   "blush",
 ];
 
+const contactSurfaces: BlockTheme[] = ["white", ...moduleSurfaces];
+
+export type TextSwatch = {
+  id: TextColor;
+  label: string;
+  color: string;
+};
+
+export const textColorSwatches: TextSwatch[] = [
+  { id: "auto", label: "Automatisk", color: "" },
+  ...surfaces.map((item) => ({ id: item.id, label: item.label, color: item.color })),
+];
+
+const textColorById = new Map(textColorSwatches.map((item) => [item.id, item]));
+
+export function resolveTextColor(id?: TextColor): string | undefined {
+  if (!id || id === "auto") return undefined;
+  return textColorById.get(id)?.color;
+}
+
 const imageTextSurfaces: BlockTheme[] = ["fog", "ice", "ink", "blush", "coral", "sage"];
 
 const textSurfaces: BlockTheme[] = ["white", "fog", "mist", "linen", "blush", "sand"];
@@ -125,10 +147,10 @@ const pageHeaderSurfaces: BlockTheme[] = [...moduleSurfaces, "white", "charcoal"
 
 const themesByType: Partial<Record<BlockType, BlockTheme[]>> = {
   imageText: imageTextSurfaces,
-  contact: moduleSurfaces,
+  contact: contactSurfaces,
   imagePair: moduleSurfaces,
   text: textSurfaces,
-  contactUs: moduleSurfaces,
+  contactUs: contactSurfaces,
   article: textSurfaces,
   sectionHeader: textSurfaces,
   statement: statementSurfaces,

@@ -1,12 +1,13 @@
+import { ContactFormFields } from "@/components/cms/contact-form";
 import { NewsBlock } from "@/components/cms/news-block";
 import { OfferingBlock } from "@/components/cms/offering-block";
 import { Header } from "@/components/header";
 import { SiteFooter } from "@/components/site-footer";
-import { renderInline } from "@/lib/cms/inline";
+import { blockSurfaceProps } from "@/lib/cms/block-style";
+import { HeadingText, plainText, renderBreaks, renderInline, RichText } from "@/lib/cms/inline";
 import { articleParagraphs, quoteAfterIndex, resolveTheme } from "@/lib/cms/library";
 import { formatNewsDate } from "@/lib/cms/news-date";
 import type { CmsBlock, CmsCard, CmsLink, CmsPage } from "@/lib/cms/types";
-import type { ReactNode } from "react";
 import "./page-blocks.css";
 
 export function PageBlocks({
@@ -22,10 +23,9 @@ export function PageBlocks({
   publishedAt?: string;
   articleItems?: CmsCard[];
 }) {
-  const firstIsHero = page.blocks[0]?.type === "hero";
-  const hasPageHeader = page.blocks.some(
-    (block) => block.type === "pageHeader" || block.type === "contactUs",
-  );
+  const first = page.blocks[0]?.type;
+  const firstIsHero = first === "hero";
+  const hasOwnHeader = firstIsHero || first === "pageHeader" || first === "contactUs";
   const parentHref = page.parentSlug ? `/${page.parentSlug}` : "/";
   const listsNews =
     page.role === "news" &&
@@ -41,13 +41,7 @@ export function PageBlocks({
 
   return (
     <div id="top">
-      {firstIsHero || hasPageHeader ? null : (
-        <header className="cms-topbar">
-          <a href="/" className="logo-link">
-            <img src="/icons/logo.svg" width={239} height={46} alt="Mindstreet" />
-          </a>
-        </header>
-      )}
+      {hasOwnHeader ? null : <Header variant="bar" theme="ink" items={menu} />}
       {page.blocks.map((block, index) => (
         <BlockView
           key={block.id}
@@ -100,7 +94,7 @@ function BlockView({
       { label: block.button2Label?.trim() ?? "", href: block.button2Href?.trim() || "#" },
     ].filter((button) => button.label);
     return (
-      <section className="hero cms-hero">
+      <section {...blockSurfaceProps(block, "hero cms-hero")}>
         {block.image ? (
           <img className="hero-photo" src={block.image} alt="" />
         ) : (
@@ -113,8 +107,8 @@ function BlockView({
         {withHeader ? <Header items={menu} /> : null}
         <div className="hero-content">
           <div>
-            <h1>{block.heading}</h1>
-            {block.body ? <p className="cms-hero-lead">{block.body}</p> : null}
+            <HeadingText text={block.heading} as="h1" />
+            {block.body ? <RichText text={block.body} className="cms-hero-lead" /> : null}
           </div>
           {heroButtons.length > 0 ? (
             <div className="hero-actions">
@@ -131,16 +125,15 @@ function BlockView({
   }
 
   if (block.type === "text") {
-    const paragraphs = articleParagraphs(block.body);
     return (
       <ThemedSurface block={block}>
         <div className="intro">
-          <h2>{block.heading}</h2>
-          {paragraphs.length > 0 ? (
+          <div>
+            <HeadingText text={block.heading} as="h2" />
+          </div>
+          {block.body.trim() ? (
             <div>
-              {paragraphs.map((paragraph, index) => (
-                <p key={index}>{paragraph}</p>
-              ))}
+              <RichText text={block.body} />
             </div>
           ) : null}
         </div>
@@ -162,16 +155,13 @@ function BlockView({
 
   if (block.type === "textColumn") {
     return (
-      <section className="cms-text-column">
+      <section {...blockSurfaceProps(block, "cms-text-column")}>
         {(block.items ?? []).map((item) => {
-          const paragraphs = articleParagraphs(item.body);
-          if (!item.heading.trim() && paragraphs.length === 0) return null;
+          if (!item.heading.trim() && !item.body.trim()) return null;
           return (
             <div key={item.id} className="cms-text-column-section">
-              {item.heading.trim() ? <h2>{item.heading}</h2> : null}
-              {paragraphs.map((paragraph, index) => (
-                <ArticleParagraph key={index} text={paragraph} />
-              ))}
+              {item.heading.trim() ? <HeadingText text={item.heading} as="h2" /> : null}
+              {item.body.trim() ? <RichText text={item.body} /> : null}
             </div>
           );
         })}
@@ -182,7 +172,7 @@ function BlockView({
   if (block.type === "banner") {
     const size = block.size === "small" ? "small" : "large";
     return (
-      <section className="seminar-wrap">
+      <section {...blockSurfaceProps(block, "seminar-wrap")}>
         <div className={`seminar is-${size}`}>
           {block.image ? (
             <img src={block.image} alt="" />
@@ -191,8 +181,8 @@ function BlockView({
           )}
           <div className="seminar-shade" />
           <div className="seminar-copy">
-            {block.body ? <p>{block.body}</p> : null}
-            <h2>{block.heading}</h2>
+            {block.body ? <RichText text={block.body} /> : null}
+            <HeadingText text={block.heading} as="h2" />
             {block.buttonLabel ? (
               <a className="btn btn-cream" href={block.buttonHref || "#"}>
                 {block.buttonLabel}
@@ -208,7 +198,7 @@ function BlockView({
     const side = block.imageSide === "left" ? "left" : "right";
     const theme = resolveTheme(block);
     return (
-      <section className={`cms-media cms-theme-${theme}`}>
+      <section {...blockSurfaceProps(block, `cms-media cms-theme-${theme}`)}>
         {(block.shape ?? theme === "mist") ? (
           <ModuleShape align={side === "right" ? "left" : undefined} />
         ) : null}
@@ -225,7 +215,7 @@ function BlockView({
     const side = block.imageSide === "right" ? "right" : "left";
     const theme = resolveTheme(block);
     return (
-      <section className={`cms-media cms-media-pair cms-theme-${theme}`}>
+      <section {...blockSurfaceProps(block, `cms-media cms-media-pair cms-theme-${theme}`)}>
         {(block.shape ?? theme === "mist") ? (
           <ModuleShape align={side === "right" ? "left" : undefined} />
         ) : null}
@@ -244,7 +234,7 @@ function BlockView({
       <ThemedSurface block={block}>
         <div className={`cms-divider is-${align}`}>
           <div className="cms-divider-inner">
-            <h2>{block.heading}</h2>
+            <HeadingText text={block.heading} as="h2" />
           </div>
         </div>
       </ThemedSurface>
@@ -266,7 +256,7 @@ function BlockView({
         </a>
         <article className="cms-article">
           <div className="cms-article-intro">
-            {block.heading ? <h2>{block.heading}</h2> : null}
+            {block.heading ? <HeadingText text={block.heading} as="h2" /> : null}
             {dateLabel ? (
               <time className="cms-article-date" dateTime={articleDate}>
                 {dateLabel}
@@ -278,7 +268,7 @@ function BlockView({
             {after === -1 && quote ? <ArticleQuote quote={quote} credit={credit} /> : null}
             {paragraphs.map((paragraph, index) => (
               <div key={index}>
-                <ArticleParagraph text={paragraph} />
+                <RichText text={paragraph} />
                 {after === index && quote ? <ArticleQuote quote={quote} credit={credit} /> : null}
               </div>
             ))}
@@ -292,10 +282,10 @@ function BlockView({
     const align = block.align === "left" || block.align === "right" ? block.align : "center";
     const theme = resolveTheme(block);
     return (
-      <section className={`cms-statement is-${align} cms-theme-${theme}`}>
+      <section {...blockSurfaceProps(block, `cms-statement is-${align} cms-theme-${theme}`)}>
         {(block.shape ?? theme === "mist") ? <ModuleShape /> : null}
         <div className="cms-statement-inner">
-          {block.body ? <p>{block.body}</p> : null}
+          {block.body ? <RichText text={block.body} /> : null}
           {block.buttonLabel ? (
             <a className="btn cms-statement-link" href={block.buttonHref || "#"}>
               {block.buttonLabel}
@@ -307,7 +297,13 @@ function BlockView({
   }
 
   if (block.type === "offering") {
-    return <OfferingBlock heading={block.heading} items={block.items ?? []} />;
+    return (
+      <OfferingBlock
+        heading={block.heading}
+        items={block.items ?? []}
+        {...blockSurfaceProps(block, "offering")}
+      />
+    );
   }
 
   if (block.type === "news" || block.type === "newsTwelve") {
@@ -317,26 +313,37 @@ function BlockView({
         items={block.items ?? []}
         preview={preview}
         pageSize={block.type === "newsTwelve" ? 12 : 4}
+        {...blockSurfaceProps(block, "news")}
       />
     );
   }
 
   if (block.type === "articleList") {
     return (
-      <NewsBlock heading={block.heading} items={articleItems} preview={preview} pageSize={12} />
+      <NewsBlock
+        heading={block.heading}
+        items={articleItems}
+        preview={preview}
+        pageSize={12}
+        {...blockSurfaceProps(block, "news")}
+      />
     );
   }
 
   if (block.type === "contactCards" || block.type === "contactUs") {
     const items = block.items ?? [];
     const cards = (
-      <section className="cms-contact-cards">
+      <section
+        {...(block.type === "contactCards"
+          ? blockSurfaceProps(block, "cms-contact-cards")
+          : { className: "cms-contact-cards" })}
+      >
         <div className="section-inner">
           {block.type === "contactCards" &&
           (block.heading.trim() || block.body.trim() || block.buttonLabel?.trim()) ? (
             <div className="cms-contact-cards-intro">
-              {block.heading.trim() ? <h2>{block.heading}</h2> : null}
-              {block.body.trim() ? <p className="cms-contact-cards-text">{block.body}</p> : null}
+              {block.heading.trim() ? <HeadingText text={block.heading} as="h2" /> : null}
+              {block.body.trim() ? <RichText text={block.body} className="cms-contact-cards-text" /> : null}
               {block.buttonLabel?.trim() ? (
                 <a className="btn cms-statement-link" href={block.buttonHref?.trim() || "#"}>
                   {block.buttonLabel}
@@ -371,18 +378,17 @@ function BlockView({
     );
     if (block.type === "contactCards") return cards;
     const theme = resolveTheme(block);
-    const paragraphs = articleParagraphs(block.body);
     return (
-      <div className={`cms-contact-us cms-theme-${theme}`}>
-        <div className="cms-contact-us-shape" aria-hidden="true" />
+      <div {...blockSurfaceProps(block, `cms-contact-us cms-theme-${theme}`)}>
+        {(block.shape ?? true) ? <div className="cms-contact-us-shape" aria-hidden="true" /> : null}
         <Header variant="bar" items={menu} />
         <div className="intro">
-          <h2>{block.heading}</h2>
-          {paragraphs.length > 0 ? (
+          <div>
+            <HeadingText text={block.heading} as="h2" />
+          </div>
+          {block.body.trim() ? (
             <div>
-              {paragraphs.map((paragraph, index) => (
-                <p key={index}>{paragraph}</p>
-              ))}
+              <RichText text={block.body} />
             </div>
           ) : null}
         </div>
@@ -391,17 +397,32 @@ function BlockView({
     );
   }
 
+  if (block.type === "contactForm") {
+    const address = block.heading.trim();
+    return (
+      <section className="cms-contact-form">
+        <div className="section-inner">
+          <div className="cms-contact-form-photo">
+            {block.image ? <img src={block.image} alt="" /> : null}
+            {address ? <p className="cms-contact-form-address">{renderBreaks(address)}</p> : null}
+          </div>
+          <ContactFormFields buttonLabel={block.buttonLabel?.trim() || "Submit"} />
+        </div>
+      </section>
+    );
+  }
+
   if (block.type === "expertise") {
     const items = block.items ?? [];
     return (
-      <section className="cms-expertise">
+      <section {...blockSurfaceProps(block, "cms-expertise")}>
         <div className="section-inner">
-          {block.heading ? <h2>{block.heading}</h2> : null}
+          {block.heading ? <HeadingText text={block.heading} as="h2" /> : null}
           <div className="cms-expertise-grid">
             {items.map((item) => (
               <article key={item.id}>
-                {item.heading ? <h3>{item.heading}</h3> : null}
-                {item.body ? <p>{item.body}</p> : null}
+                {item.heading ? <HeadingText text={item.heading} as="h3" /> : null}
+                {item.body ? <RichText text={item.body} /> : null}
                 <CardArrow heading={item.heading} href={item.href} />
               </article>
             ))}
@@ -418,7 +439,7 @@ function CardArrow({ heading, href }: { heading: string; href: string }) {
   const icon = <img className="cms-expertise-arrow" src="/icons/arrow.svg" width={23} height={23} alt="" />;
   if (!href.trim()) return icon;
   return (
-    <a className="cms-expertise-link" href={href} aria-label={heading || href}>
+    <a className="cms-expertise-link" href={href} aria-label={plainText(heading) || href}>
       {icon}
     </a>
   );
@@ -433,7 +454,7 @@ function ThemedSurface({
 }) {
   const theme = resolveTheme(block);
   return (
-    <section className={`cms-surface cms-theme-${theme}`}>
+    <section {...blockSurfaceProps(block, `cms-surface cms-theme-${theme}`)}>
       {(block.shape ?? theme === "mist") ? <ModuleShape /> : null}
       <div className="cms-surface-inner">{children}</div>
     </section>
@@ -563,10 +584,14 @@ function ContactLines({ block }: { block: CmsBlock }) {
 function ModuleCopy({ block }: { block: CmsBlock }) {
   return (
     <div className="cms-module-copy">
-      {block.eyebrow ? <p className="cms-eyebrow">{block.eyebrow}</p> : null}
-      {block.heading ? <h2>{block.heading}</h2> : null}
+      {block.eyebrow ? <p className="cms-eyebrow">{renderBreaks(block.eyebrow)}</p> : null}
+      {block.heading ? <HeadingText text={block.heading} as="h2" /> : null}
       <ContactLines block={block} />
-      {block.body ? <p className="cms-module-text">{block.body}</p> : null}
+      {block.body ? (
+        <div className="cms-module-text">
+          <RichText text={block.body} />
+        </div>
+      ) : null}
       {block.buttonLabel ? (
         <a className="btn btn-dark" href={block.buttonHref || "#"}>
           {block.buttonLabel}
@@ -576,86 +601,11 @@ function ModuleCopy({ block }: { block: CmsBlock }) {
   );
 }
 
-function ArticleParagraph({ text }: { text: string }) {
-  const blocks: ReactNode[] = [];
-  let paragraph: string[] = [];
-  let bullets: string[] = [];
-  let numbers: string[] = [];
-  let key = 0;
-
-  function flushParagraph() {
-    if (paragraph.length === 0) return;
-    blocks.push(<p key={key++}>{renderInline(paragraph.join("\n"))}</p>);
-    paragraph = [];
-  }
-
-  function flushBullets() {
-    if (bullets.length === 0) return;
-    blocks.push(
-      <ul key={key++}>
-        {bullets.map((item, index) => (
-          <li key={index}>{renderInline(item)}</li>
-        ))}
-      </ul>,
-    );
-    bullets = [];
-  }
-
-  function flushNumbers() {
-    if (numbers.length === 0) return;
-    blocks.push(
-      <ol key={key++}>
-        {numbers.map((item, index) => (
-          <li key={index}>{renderInline(item)}</li>
-        ))}
-      </ol>,
-    );
-    numbers = [];
-  }
-
-  for (const raw of text.split("\n")) {
-    const line = raw.trim();
-    if (!line) continue;
-    if (line.startsWith("# ")) {
-      flushParagraph();
-      flushBullets();
-      flushNumbers();
-      blocks.push(
-        <p key={key++} className="cms-article-subhead">
-          {renderInline(line.slice(2))}
-        </p>,
-      );
-      continue;
-    }
-    if (line.startsWith("- ")) {
-      flushParagraph();
-      flushNumbers();
-      bullets.push(line.slice(2));
-      continue;
-    }
-    const numbered = line.match(/^\d+\.\s+(.*)$/);
-    if (numbered) {
-      flushParagraph();
-      flushBullets();
-      numbers.push(numbered[1]);
-      continue;
-    }
-    flushBullets();
-    flushNumbers();
-    paragraph.push(line);
-  }
-
-  flushParagraph();
-  flushBullets();
-  flushNumbers();
-  return <>{blocks}</>;
-}
-
 function ArticleQuote({ quote, credit }: { quote: string; credit: string }) {
   return (
     <blockquote>
       <div className="cms-article-quote-text">
-        <ArticleParagraph text={quote} />
+        <RichText text={quote} />
       </div>
       {credit ? <p className="cms-article-quote-credit">{renderInline(credit)}</p> : null}
     </blockquote>

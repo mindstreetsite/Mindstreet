@@ -1,9 +1,16 @@
 import { menuItems } from "@/content/home";
 import type { BlockTheme, BlockType, CmsBlock, CmsCard, CmsLink, CmsPage } from "@/lib/cms/types";
 
-export { swatchesFor, themesFor, surfaceById, type Surface } from "@/lib/design/palette";
+export {
+  swatchesFor,
+  textColorSwatches,
+  themesFor,
+  surfaceById,
+  type Surface,
+} from "@/lib/design/palette";
 
 export const SITE_HOST = "www.mindstreet.se";
+export const SITE_HOME = `https://${SITE_HOST}`;
 
 const loremBody =
   "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.";
@@ -22,6 +29,7 @@ export type BlockFields = {
   align: boolean;
   theme: boolean;
   quote: boolean;
+  textColor: boolean;
 };
 
 export const library: {
@@ -73,6 +81,11 @@ export const library: {
     type: "contactUs",
     label: "Kontakta oss",
     description: "Header, text och kontaktkort",
+  },
+  {
+    type: "contactForm",
+    label: "Kontaktformulär",
+    description: "Bild med adress och formulär",
   },
   {
     type: "imagePair",
@@ -190,6 +203,12 @@ const defaults: Record<BlockType, Omit<CmsBlock, "id" | "type">> = {
     theme: "sand",
     buttonLabel: "",
     buttonHref: "",
+  },
+  contactForm: {
+    heading: "Rådmansgatan 14, 11425 Stockholm",
+    body: "",
+    image: "",
+    buttonLabel: "Submit",
   },
   imagePair: {
     heading: experienceHeading,
@@ -659,6 +678,8 @@ export function cloneTemplateBlocks(blocks: CmsBlock[]): CmsBlock[] {
     if (block.align) next.align = block.align;
     if (block.size) next.size = block.size;
     if (block.theme) next.theme = block.theme;
+    if (block.headingColor) next.headingColor = block.headingColor;
+    if (block.bodyColor) next.bodyColor = block.bodyColor;
     if (block.shape !== undefined) next.shape = block.shape;
     if (block.type === "contact") {
       next.contactName = "";
@@ -710,6 +731,7 @@ export function blockHasImage(type: BlockType): boolean {
     type === "image" ||
     type === "imageText" ||
     type === "contact" ||
+    type === "contactForm" ||
     type === "imagePair" ||
     type === "article"
   );
@@ -751,11 +773,12 @@ const none: Omit<BlockFields, "heading" | "body"> = {
   align: false,
   theme: false,
   quote: false,
+  textColor: false,
 };
 
 export function fieldsFor(type: BlockType): BlockFields {
   if (type === "banner") {
-    return { ...none, heading: "Rubrik", body: "Liten rad", image: true, button: true };
+    return { ...none, heading: "Rubrik", body: "Liten rad", image: true, button: true, textColor: true };
   }
 
   if (type === "imageText") {
@@ -768,6 +791,7 @@ export function fieldsFor(type: BlockType): BlockFields {
       button: true,
       imageSide: true,
       theme: true,
+      textColor: true,
     };
   }
 
@@ -781,6 +805,7 @@ export function fieldsFor(type: BlockType): BlockFields {
       button: true,
       imageSide: true,
       theme: true,
+      textColor: true,
     };
   }
 
@@ -795,31 +820,36 @@ export function fieldsFor(type: BlockType): BlockFields {
       button: true,
       imageSide: true,
       theme: true,
+      textColor: true,
     };
   }
 
   if (type === "sectionHeader") {
-    return { ...none, heading: "Rubrik", body: null, align: true, theme: true };
+    return { ...none, heading: "Rubrik", body: null, align: true, theme: true, textColor: true };
   }
 
   if (type === "contactCards") {
-    return { ...none, heading: "Rubrik", body: "Text", button: true };
+    return { ...none, heading: "Rubrik", body: "Text", button: true, textColor: true };
   }
 
   if (type === "contactUs") {
-    return { ...none, heading: "Rubrik", body: "Text", button: true, theme: true };
+    return { ...none, heading: "Rubrik", body: "Text", button: true, theme: true, textColor: true };
+  }
+
+  if (type === "contactForm") {
+    return { ...none, heading: "Adress", body: null, image: true };
   }
 
   if (type === "expertise" || type === "offering" || isNewsBlock(type) || type === "articleList") {
-    return { ...none, heading: "Rubrik", body: null };
+    return { ...none, heading: "Rubrik", body: null, textColor: true };
   }
 
   if (type === "statement") {
-    return { ...none, heading: null, body: "Text", button: true, theme: true };
+    return { ...none, heading: null, body: "Text", button: true, theme: true, textColor: true };
   }
 
   if (type === "text") {
-    return { ...none, heading: "Rubrik", body: "Text", theme: true };
+    return { ...none, heading: "Rubrik", body: "Text", theme: true, textColor: true };
   }
 
   if (type === "pageHeader") {
@@ -827,7 +857,7 @@ export function fieldsFor(type: BlockType): BlockFields {
   }
 
   if (type === "textColumn") {
-    return { ...none, heading: null, body: null };
+    return { ...none, heading: null, body: null, textColor: true };
   }
 
   if (type === "image") {
@@ -842,6 +872,7 @@ export function fieldsFor(type: BlockType): BlockFields {
       quote: true,
       image: true,
       theme: true,
+      textColor: true,
     };
   }
 
@@ -850,5 +881,19 @@ export function fieldsFor(type: BlockType): BlockFields {
     heading: "Rubrik",
     body: "Text",
     image: blockHasImage(type),
+    textColor: true,
   };
+}
+
+const itemHeadingTypes = new Set<BlockType>(["textColumn"]);
+const itemBodyTypes = new Set<BlockType>(["textColumn", "expertise", "offering", "contact"]);
+
+export function showsHeadingColor(type: BlockType): boolean {
+  const fields = fieldsFor(type);
+  return Boolean(fields.textColor && (fields.heading || itemHeadingTypes.has(type)));
+}
+
+export function showsBodyColor(type: BlockType): boolean {
+  const fields = fieldsFor(type);
+  return Boolean(fields.textColor && (fields.body || itemBodyTypes.has(type)));
 }

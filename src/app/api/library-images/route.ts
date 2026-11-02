@@ -2,7 +2,7 @@ import { del, list, put } from "@vercel/blob";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/cms/admin-session";
-import { readCmsState, writeCmsState } from "@/lib/cms/blob-store";
+import { readCmsState, updateCmsState } from "@/lib/cms/blob-store";
 import { publishedImageUses, withoutImage } from "@/lib/cms/storage";
 
 export const dynamic = "force-dynamic";
@@ -122,9 +122,10 @@ export async function DELETE(request: Request) {
   }
 
   try {
-    const stored = await readCmsState();
-    const next = withoutImage(stored.state, url);
-    if (next.changed) await writeCmsState(next.state);
+    await updateCmsState((state) => {
+      const next = withoutImage(state, url);
+      return next.changed ? next.state : state;
+    });
   } catch {
     return NextResponse.json({
       ok: true,

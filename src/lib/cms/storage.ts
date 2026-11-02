@@ -323,7 +323,7 @@ export function restoreArchivedPages(
   };
 }
 
-function templatesNotMatchingPages(templates: CmsTemplate[], pages: CmsPage[]): CmsTemplate[] {
+export function templatesNotMatchingPages(templates: CmsTemplate[], pages: CmsPage[]): CmsTemplate[] {
   const live = new Set(pages.map((page) => page.slug));
   return templates.filter((template) => !live.has(template.slug));
 }
@@ -340,7 +340,7 @@ function templateAsPage(template: CmsTemplate): CmsPage {
   };
 }
 
-function hydrateTemplateArchiveEntry(value: unknown): TemplateArchiveEntry | null {
+export function hydrateTemplateArchiveEntry(value: unknown): TemplateArchiveEntry | null {
   if (!value || typeof value !== "object") return null;
   const entry = value as Partial<TemplateArchiveEntry>;
   if (typeof entry.id !== "string" || typeof entry.slug !== "string" || typeof entry.deletedAt !== "string") {
@@ -357,7 +357,7 @@ function hydrateTemplateArchiveEntry(value: unknown): TemplateArchiveEntry | nul
   };
 }
 
-function hydrateTemplate(value: unknown): CmsTemplate | null {
+export function hydrateTemplate(value: unknown): CmsTemplate | null {
   const page = hydratePage(value);
   if (!page) return null;
   return {
@@ -369,7 +369,7 @@ function hydrateTemplate(value: unknown): CmsTemplate | null {
   };
 }
 
-function hydrateArchiveEntry(value: unknown): PageArchiveEntry | null {
+export function hydrateArchiveEntry(value: unknown): PageArchiveEntry | null {
   if (!value || typeof value !== "object") return null;
   const entry = value as Partial<PageArchiveEntry>;
   if (typeof entry.id !== "string" || typeof entry.slug !== "string") return null;
@@ -597,7 +597,7 @@ export function orderedPages(pages: CmsPage[]): CmsPage[] {
   return result;
 }
 
-function hydratePage(value: unknown): CmsPage | null {
+export function hydratePage(value: unknown): CmsPage | null {
   if (!value || typeof value !== "object") return null;
   const page = value as Partial<CmsPage> & { slug?: unknown; blocks?: unknown };
   if (typeof page.slug !== "string" || !Array.isArray(page.blocks)) return null;
@@ -646,6 +646,11 @@ function hydrateBlock(value: unknown): CmsBlock {
     };
   }
   return block;
+}
+
+export function hydrateCmsLinks(value: unknown): CmsLink[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.filter(isCmsLink);
 }
 
 function isCmsLink(value: unknown): value is CmsLink {

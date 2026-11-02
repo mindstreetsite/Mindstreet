@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/cms/admin-session";
-import { readCmsState, writeCmsState } from "@/lib/cms/blob-store";
-import { hydrateState, SEED_VERSION } from "@/lib/cms/storage";
+import { applyCmsChange, readCmsState } from "@/lib/cms/blob-store";
+import { parseCmsChange } from "@/lib/cms/merge";
+import { serializeState } from "@/lib/cms/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -37,19 +38,36 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Ogiltigt innehåll." }, { status: 400 });
   }
 
-  if (!body || typeof body !== "object" || !("state" in body)) {
+  if (!body || typeof body !== "object") {
     return NextResponse.json({ error: "Ogiltigt innehåll." }, { status: 400 });
   }
 
-  const payload = body as { state?: unknown };
-  const incoming = payload.state;
-  const state = hydrateState(
-    incoming && typeof incoming === "object" ? { ...incoming, seedVersion: SEED_VERSION } : incoming,
-  );
+  const payload = body as { change?: unknown; baseEtag?: unknown };
+  const change = parseCmsChange(payload.change);
+  if (!change) {
+    return NextResponse.json({ error: "Ogiltigt innehåll." }, { status: 400 });
+  }
+
+  const baseEtag = payload.baseEtag == null ? null : payload.baseEtag;
+  if (baseEtag !== null && typeof baseEtag !== "string") {
+    return NextResponse.json({ error: "Ogiltigt innehåll." }, { status: 400 });
+  }
 
   try {
-    const nextEtag = await writeCmsState(state);
-    return NextResponse.json({ etag: nextEtag });
+    const result = await applyCmsChange(baseEtag, change);
+    const saved = {
+      etag: result.etag,
+      state: serializeState(result.state),
+      empty: result.empty,
+      conflicts: result.conflicts,
+    };
+    if (!result.ok) {
+      return NextResponse.json(
+        { ...saved, error: "Innehållet har ändrats av någon annan." },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json(saved);
   } catch {
     return NextResponse.json({ error: "Kunde inte spara." }, { status: 500 });
   }

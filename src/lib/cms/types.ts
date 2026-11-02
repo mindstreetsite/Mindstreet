@@ -8,6 +8,7 @@ export type BlockType =
   | "contact"
   | "contactCards"
   | "contactUs"
+  | "contactForm"
   | "imagePair"
   | "sectionHeader"
   | "article"
@@ -37,8 +38,11 @@ export type BlockTheme =
   | "fog"
   | "charcoal"
   | "rust"
+  | "brown"
   | "ice"
   | "blush";
+
+export type TextColor = "auto" | BlockTheme;
 
 export type CmsCard = {
   id: string;
@@ -82,6 +86,8 @@ export type CmsBlock = {
   align?: BlockAlign;
   size?: BlockSize;
   theme?: BlockTheme;
+  headingColor?: TextColor;
+  bodyColor?: TextColor;
   shape?: boolean;
   parentSlug?: string;
   menu?: CmsLink[];

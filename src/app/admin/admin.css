@@ -503,6 +503,15 @@
   line-height: 1.4;
 }
 
+.admin-field-hint,
+.admin-format-hint {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .admin-image.is-invalid {
   outline: 1px solid var(--rust);
   outline-offset: 4px;
@@ -1512,6 +1521,33 @@ span.admin-publish {
     52px 16px 0 color-mix(in srgb, var(--navy) 28%, transparent);
 }
 
+.admin-thumb-contactForm {
+  background: var(--charcoal);
+}
+
+.admin-thumb-contactForm::before,
+.admin-thumb-contactForm::after {
+  content: "";
+  position: absolute;
+}
+
+.admin-thumb-contactForm::before {
+  left: 16px;
+  right: 16px;
+  bottom: 8px;
+  height: 32px;
+  border-radius: 6px;
+  background: var(--linen);
+}
+
+.admin-thumb-contactForm::after {
+  left: 24px;
+  right: 46%;
+  bottom: 18px;
+  height: 1px;
+  background: color-mix(in srgb, var(--charcoal) 45%, transparent);
+}
+
 .admin-thumb-imagePair {
   background: var(--sand);
 }
@@ -1801,6 +1837,16 @@ label.admin-inline-switch {
   box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--navy);
 }
 
+.admin-swatches .admin-swatch-dots button.is-auto {
+  background:
+    linear-gradient(
+      135deg,
+      var(--paper) 46%,
+      var(--text-muted) 46% 54%,
+      var(--paper) 54%
+    );
+}
+
 .admin-save {
   display: flex;
   flex-wrap: wrap;
@@ -1933,6 +1979,52 @@ label.admin-inline-switch {
 
 .admin-format-bar button svg {
   display: block;
+}
+
+.admin-format-list {
+  position: relative;
+}
+
+.admin-format-list-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 30;
+  display: grid;
+  min-width: 10.5rem;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--paper);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--navy) 12%, transparent);
+}
+
+.admin-format-bar .admin-format-list-menu button,
+.admin-canvas .admin-format-bar .admin-format-list-menu button,
+.admin-draft-main .admin-format-bar .admin-format-list-menu button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  min-height: 32px;
+  padding: 0 8px;
+  gap: 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: var(--weight-regular);
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.admin-format-bar .admin-format-list-menu button[aria-checked="true"] {
+  background: color-mix(in srgb, var(--navy) 10%, transparent);
 }
 
 .admin-format-clear {

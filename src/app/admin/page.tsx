@@ -19,7 +19,9 @@ import {
   applyTextStyle,
   clearFormatting,
   inspectFormat,
+  listMarkers,
   type LineFormat,
+  type ListMarker,
   type TextStyle,
 } from "@/lib/cms/inline";
 import {
@@ -66,9 +68,18 @@ import {
   resolvedMenu,
   resolveTheme,
   syncAllArticleNews,
+  showsBodyColor,
+  showsHeadingColor,
   swatchesFor,
+  textColorSwatches,
   usesExpandedTheme,
 } from "@/lib/cms/library";
+import {
+  conflictNotice,
+  diffStates,
+  isChangeEmpty,
+  type CmsConflicts,
+} from "@/lib/cms/merge";
 import {
   blocksWithoutImage,
   composeSlug,
@@ -98,11 +109,12 @@ import {
   type PublishedImageUse,
   type TemplateArchiveEntry,
 } from "@/lib/cms/storage";
-import type { BlockTheme, BlockType, CmsBlock, CmsCard, CmsLink, CmsPage, PageRole } from "@/lib/cms/types";
+import type { BlockType, CmsBlock, CmsCard, CmsLink, CmsPage, PageRole } from "@/lib/cms/types";
 import "./ui.css";
 import "./admin.css";
 
 const PREVIEW_WIDTH = 1440;
+const LINE_HINT = "Enter = ny rad, tom rad = nytt stycke";
 
 async function loadLibraryImages() {
   const response = await fetch("/api/library-images", { cache: "no-store" });
@@ -466,6 +478,12 @@ export default function AdminPage() {
   const templateArchiveRef = useRef(templateArchive);
   const menuRef = useRef(menu);
   const etagRef = useRef<string | null>(null);
+  const confirmedRef = useRef<CmsState>({
+    pages: [],
+    archive: [],
+    templates: [],
+    templateArchive: [],
+  });
   const saveChain = useRef(Promise.resolve<string | null>(null));
   const saveTimer = useRef<number | null>(null);
   const saveWaiters = useRef<Array<(error: string | null) => void>>([]);
@@ -512,6 +530,18 @@ export default function AdminPage() {
     setSelectedSlug((current) => current ?? orderedPages(state.pages)[0]?.slug ?? null);
   }
 
+  function rememberConfirmed() {
+    confirmedRef.current = structuredClone(snapshot());
+  }
+
+  function syncDraftFromPages() {
+    const key = draftKey.current;
+    if (!key?.endsWith(":edit")) return;
+    const slug = key.slice(0, -":edit".length);
+    const page = pagesRef.current.find((entry) => entry.slug === slug);
+    if (page) setDraftBlocks(structuredClone(pageDraft(page).blocks));
+  }
+
   async function loadCms() {
     const response = await fetch("/api/cms", { cache: "no-store" });
     if (response.status === 401) {
@@ -529,60 +559,49 @@ export default function AdminPage() {
       etag: string | null;
       empty: boolean;
     };
-    let state = data.state;
-    let etag = data.etag;
+    applyState(data.state, data.etag);
+    rememberConfirmed();
+
     const local = readLocalSnapshot();
-
     if (local) {
-      const pageSlugs = new Set(state.pages.map((page) => page.slug));
-      const archiveIds = new Set(state.archive.map((entry) => entry.id));
-      const templateSlugs = new Set(state.templates.map((template) => template.slug));
-      const templateArchiveIds = new Set(state.templateArchive.map((entry) => entry.id));
-      const merged: CmsState = {
-        pages: [...state.pages, ...local.pages.filter((page) => !pageSlugs.has(page.slug))],
-        archive: [...state.archive, ...local.archive.filter((entry) => !archiveIds.has(entry.id))],
-        templates: [
-          ...state.templates,
-          ...local.templates.filter((template) => !templateSlugs.has(template.slug)),
-        ],
-        templateArchive: [
-          ...state.templateArchive,
-          ...local.templateArchive.filter((entry) => !templateArchiveIds.has(entry.id)),
-        ],
-        menu: state.menu ?? local.menu,
-      };
-      const changed =
-        data.empty ||
-        merged.pages.length !== state.pages.length ||
-        merged.archive.length !== state.archive.length ||
-        merged.templates.length !== state.templates.length ||
-        merged.templateArchive.length !== state.templateArchive.length;
-
-      if (changed) {
-        const saved = await fetch("/api/cms", {
-          method: "PUT",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ state: data.empty ? local : merged, etag }),
-        });
-        if (saved.ok) {
-          const body = (await saved.json()) as { etag?: string };
-          state = hydrateState({
-            ...(data.empty ? local : merged),
+      if (data.empty) {
+        applyState(
+          hydrateState({
+            ...local,
             seedVersion: SEED_VERSION,
-          });
-          etag = body.etag ?? etag;
-        }
+          }),
+          data.etag,
+        );
+      } else {
+        const pageSlugs = new Set(data.state.pages.map((page) => page.slug));
+        const archiveIds = new Set(data.state.archive.map((entry) => entry.id));
+        const templateSlugs = new Set(data.state.templates.map((template) => template.slug));
+        const templateArchiveIds = new Set(data.state.templateArchive.map((entry) => entry.id));
+        const merged: CmsState = {
+          pages: [...data.state.pages, ...local.pages.filter((page) => !pageSlugs.has(page.slug))],
+          archive: [...data.state.archive, ...local.archive.filter((entry) => !archiveIds.has(entry.id))],
+          templates: [
+            ...data.state.templates,
+            ...local.templates.filter((template) => !templateSlugs.has(template.slug)),
+          ],
+          templateArchive: [
+            ...data.state.templateArchive,
+            ...local.templateArchive.filter((entry) => !templateArchiveIds.has(entry.id)),
+          ],
+          menu: data.state.menu ?? local.menu,
+        };
+        applyState(merged, data.etag);
       }
     }
 
-    applyState(state, etag);
-    const filled = backfillTestArticleNews(state.pages) ?? state.pages;
+    const current = snapshot();
+    const filled = backfillTestArticleNews(current.pages) ?? current.pages;
     const synced = syncAllArticleNews(filled);
-    if (synced !== state.pages) {
+    if (synced !== current.pages) {
       pagesRef.current = synced;
       setPages(synced);
-      await saveNow();
     }
+    await saveNow();
     setPhase("ready");
   }
 
@@ -698,14 +717,36 @@ export default function AdminPage() {
 
   function enqueueSave(): Promise<string | null> {
     const run = saveChain.current.then(async () => {
+      const sent = snapshot();
+      const change = diffStates(confirmedRef.current, sent);
+      if (isChangeEmpty(change)) return null;
       const response = await fetch("/api/cms", {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ state: snapshot(), etag: etagRef.current }),
+        body: JSON.stringify({ change, baseEtag: etagRef.current }),
       });
-      const data = (await response.json().catch(() => null)) as { etag?: string; error?: string } | null;
+      const data = (await response.json().catch(() => null)) as {
+        etag?: string | null;
+        error?: string;
+        state?: unknown;
+        conflicts?: CmsConflicts;
+      } | null;
+      if (response.status === 409) {
+        if (data?.state && typeof data.state === "object") {
+          applyState(
+            hydrateState({ ...data.state, seedVersion: SEED_VERSION }),
+            data.etag ?? etagRef.current,
+          );
+          rememberConfirmed();
+          syncDraftFromPages();
+        }
+        return data?.conflicts
+          ? conflictNotice(data.conflicts, pagesRef.current)
+          : (data?.error ?? "Innehållet har ändrats av någon annan.");
+      }
       if (!response.ok) return data?.error ?? "Kunde inte spara.";
       if (data?.etag) etagRef.current = data.etag;
+      confirmedRef.current = structuredClone(sent);
       return null;
     });
     saveChain.current = run.then(
@@ -2517,11 +2558,13 @@ function AdminField({
   label,
   issue,
   htmlFor,
+  hint,
   children,
 }: {
   label: string;
   issue?: CompletenessIssue;
   htmlFor?: string;
+  hint?: string;
   children: ReactElement<{ "aria-invalid"?: boolean; "aria-describedby"?: string }>;
 }) {
   const errorId = issue ? `${issue.id}-error` : undefined;
@@ -2536,6 +2579,7 @@ function AdminField({
     <label htmlFor={htmlFor} id={issue?.id} className={issue ? "is-invalid" : undefined}>
       {label}
       {control}
+      {hint ? <span className="admin-field-hint">{hint}</span> : null}
       {issue ? (
         <span className="admin-field-error" id={errorId}>
           {issue.fieldMessage}
@@ -2690,22 +2734,28 @@ function BlockFieldsEditor({
   if (block.type === "banner") {
     return (
       <>
+        {structure ? <TextColorFields block={block} onChange={onChange} /> : null}
         {content ? (
-          <AdminField label={fields.body ?? "Liten rad"} issue={bodyIssue}>
-            <Textarea
-              rows={2}
-              value={block.body}
-              onChange={(event) => onChange({ body: event.target.value })}
-            />
-          </AdminField>
+          <FormattedText
+            label={fields.body ?? "Liten rad"}
+            rows={2}
+            value={block.body}
+            issue={bodyIssue}
+            lines
+            hint={LINE_HINT}
+            onChange={(body) => onChange({ body })}
+          />
         ) : null}
         {content ? (
-          <AdminField label={fields.heading ?? "Rubrik"} issue={headingIssue}>
-            <Input
-              value={block.heading}
-              onChange={(event) => onChange({ heading: event.target.value })}
-            />
-          </AdminField>
+          <FormattedText
+            label={fields.heading ?? "Rubrik"}
+            rows={2}
+            value={block.heading}
+            issue={headingIssue}
+            lines
+            hint={LINE_HINT}
+            onChange={(heading) => onChange({ heading })}
+          />
         ) : null}
         {structure ? (
           <>
@@ -2759,6 +2809,7 @@ function BlockFieldsEditor({
           value={block.quote}
           issue={quoteIssue}
           lines
+          hint={LINE_HINT}
           onChange={(quote) => onChange({ quote })}
         />
         <AdminField label="Källa">
@@ -2795,6 +2846,7 @@ function BlockFieldsEditor({
       ) : null}
       {structure && fields.theme ? (
         <ColorSwatch
+          legend="Bakgrundsfärg"
           value={resolveTheme(block)}
           options={swatchesFor(block.type, resolveTheme(block))}
           onChange={(theme) => onChange({ theme })}
@@ -2802,13 +2854,18 @@ function BlockFieldsEditor({
             usesExpandedTheme(block.type) ? (
               <FieldSwitch
                 label="Figur"
-                checked={block.shape ?? resolveTheme(block) === "mist"}
+                checked={
+                  block.type === "contactUs"
+                    ? (block.shape ?? true)
+                    : (block.shape ?? resolveTheme(block) === "mist")
+                }
                 onChange={(shape) => onChange({ shape })}
               />
             ) : null
           }
         />
       ) : null}
+      {structure ? <TextColorFields block={block} onChange={onChange} /> : null}
       {content && fields.eyebrow ? (
         <AdminField label="Överrad" issue={eyebrowIssue}>
           <Input
@@ -2818,22 +2875,32 @@ function BlockFieldsEditor({
         </AdminField>
       ) : null}
       {content && fields.heading ? (
-        block.type === "text" ? (
-          <AdminField label={fields.heading} issue={headingIssue}>
-            <Textarea
-              rows={4}
-              value={block.heading}
-              onChange={(event) => onChange({ heading: event.target.value })}
-            />
-          </AdminField>
-        ) : (
+        block.type === "contactForm" ? (
           <AdminField label={fields.heading} issue={headingIssue}>
             <Input
               value={block.heading}
               onChange={(event) => onChange({ heading: event.target.value })}
             />
           </AdminField>
+        ) : (
+          <FormattedText
+            label={fields.heading}
+            rows={block.type === "text" ? 4 : 2}
+            value={block.heading}
+            issue={headingIssue}
+            lines
+            hint={LINE_HINT}
+            onChange={(heading) => onChange({ heading })}
+          />
         )
+      ) : null}
+      {content && block.type === "contactForm" ? (
+        <AdminField label="Knapp">
+          <Input
+            value={block.buttonLabel ?? ""}
+            onChange={(event) => onChange({ buttonLabel: event.target.value })}
+          />
+        </AdminField>
       ) : null}
       {content && block.type === "contact" ? (
         <>
@@ -2884,24 +2951,15 @@ function BlockFieldsEditor({
         </AdminField>
       ) : null}
       {content && fields.body ? (
-        block.type === "article" ? (
-          <FormattedText
-            label={fields.body}
-            rows={18}
-            value={block.body}
-            issue={bodyIssue}
-            lines
-            onChange={(body) => onChange({ body })}
-          />
-        ) : (
-          <AdminField label={fields.body} issue={bodyIssue}>
-            <Textarea
-              rows={block.type === "statement" ? 6 : 5}
-              value={block.body}
-              onChange={(event) => onChange({ body: event.target.value })}
-            />
-          </AdminField>
-        )
+        <FormattedText
+          label={fields.body}
+          rows={block.type === "article" ? 18 : block.type === "statement" ? 6 : 5}
+          value={block.body}
+          issue={bodyIssue}
+          lines
+          hint={LINE_HINT}
+          onChange={(body) => onChange({ body })}
+        />
       ) : null}
       {structure && block.type === "hero" ? (
         <>
@@ -3450,6 +3508,7 @@ function FormattedText({
   value,
   issue,
   lines = false,
+  hint,
   onChange,
 }: {
   label: string;
@@ -3457,6 +3516,7 @@ function FormattedText({
   value: string;
   issue?: CompletenessIssue;
   lines?: boolean;
+  hint?: string;
   onChange: (value: string) => void;
 }) {
   const fieldRef = useRef<HTMLTextAreaElement>(null);
@@ -3576,21 +3636,16 @@ function FormattedText({
           >
             U
           </button>
-          <button
-            type="button"
-            aria-label="Punktlista"
-            title="Punktlista"
-            aria-pressed={format.bullet}
-            onMouseDown={keepFieldSelection}
-            onClick={() => formatLine("bullet")}
-          >
-            <BulletListIcon />
-          </button>
+          <ListMarkerMenu
+            value={format.list && format.list !== "number" ? format.list : null}
+            onPointerDown={keepFieldSelection}
+            onSelect={formatLine}
+          />
           <button
             type="button"
             aria-label="Numrerad lista"
             title="Numrerad lista"
-            aria-pressed={format.number}
+            aria-pressed={format.list === "number"}
             onMouseDown={keepFieldSelection}
             onClick={() => formatLine("number")}
           >
@@ -3638,6 +3693,7 @@ function FormattedText({
         onMouseUp={rememberSelection}
         onChange={(event) => onChange(event.target.value)}
       />
+      {hint ? <span className="admin-format-hint">{hint}</span> : null}
       {issue ? (
         <span className="admin-field-error" id={errorId}>
           {issue.fieldMessage}
@@ -3647,7 +3703,100 @@ function FormattedText({
   );
 }
 
-function BulletListIcon() {
+const listMarkerLabels: Record<ListMarker, string> = {
+  disc: "Punkt",
+  circle: "Ring",
+  square: "Fyrkant",
+  dash: "Streck",
+};
+
+function ListMarkerMenu({
+  value,
+  onSelect,
+  onPointerDown,
+}: {
+  value: ListMarker | null;
+  onSelect: (kind: LineFormat) => void;
+  onPointerDown: (event: { preventDefault: () => void }) => void;
+}) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    function close(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+
+  return (
+    <div className="admin-format-list" ref={rootRef}>
+      <button
+        type="button"
+        aria-label="Punktlista"
+        title="Punktlista"
+        aria-pressed={value !== null}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        onMouseDown={onPointerDown}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <ListMarkerIcon marker={value ?? "disc"} />
+      </button>
+      {open ? (
+        <div className="admin-format-list-menu" role="menu">
+          {listMarkers.map((marker) => (
+            <button
+              key={marker}
+              type="button"
+              role="menuitemradio"
+              aria-checked={value === marker}
+              onMouseDown={onPointerDown}
+              onClick={() => {
+                onSelect(marker);
+                setOpen(false);
+              }}
+            >
+              <ListMarkerIcon marker={marker} />
+              {listMarkerLabels[marker]}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ListMarkerIcon({ marker }: { marker: ListMarker }) {
+  if (marker === "circle") {
+    return (
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+        <circle cx="3.5" cy="5" r="1.15" fill="none" stroke="currentColor" strokeWidth="1.2" />
+        <circle cx="3.5" cy="9" r="1.15" fill="none" stroke="currentColor" strokeWidth="1.2" />
+        <circle cx="3.5" cy="13" r="1.15" fill="none" stroke="currentColor" strokeWidth="1.2" />
+        <path d="M7 5h8M7 9h8M7 13h8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (marker === "square") {
+    return (
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+        <rect x="2.35" y="3.85" width="2.3" height="2.3" fill="currentColor" />
+        <rect x="2.35" y="7.85" width="2.3" height="2.3" fill="currentColor" />
+        <rect x="2.35" y="11.85" width="2.3" height="2.3" fill="currentColor" />
+        <path d="M7 5h8M7 9h8M7 13h8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (marker === "dash") {
+    return (
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+        <path d="M2 5h3M2 9h3M2 13h3M7 5h8M7 9h8M7 13h8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      </svg>
+    );
+  }
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
       <circle cx="3.5" cy="5" r="1.15" fill="currentColor" />
@@ -3770,21 +3919,22 @@ function TextColumnSections({
             </div>
             {content ? (
               <>
-                <AdminField
+                <FormattedText
                   label="Rubrik"
+                  rows={2}
+                  value={item.heading}
                   issue={findCompletenessIssue(issues, "heading", blockId, item.id)}
-                >
-                  <Input
-                    value={item.heading}
-                    onChange={(event) => patch(item.id, { heading: event.target.value })}
-                  />
-                </AdminField>
+                  lines
+                  hint={LINE_HINT}
+                  onChange={(heading) => patch(item.id, { heading })}
+                />
                 <FormattedText
                   label="Text"
                   rows={6}
                   value={item.body}
                   issue={findCompletenessIssue(issues, "body", blockId, item.id)}
                   lines
+                  hint={LINE_HINT}
                   onChange={(body) => patch(item.id, { body })}
                 />
               </>
@@ -3842,25 +3992,24 @@ function ExpertiseCards({
             </div>
             {content ? (
               <>
-                <AdminField
+                <FormattedText
                   label="Rubrik"
+                  rows={2}
+                  value={item.heading}
                   issue={findCompletenessIssue(issues, "heading", blockId, item.id)}
-                >
-                  <Input
-                    value={item.heading}
-                    onChange={(event) => patch(item.id, { heading: event.target.value })}
-                  />
-                </AdminField>
-                <AdminField
+                  lines
+                  hint={LINE_HINT}
+                  onChange={(heading) => patch(item.id, { heading })}
+                />
+                <FormattedText
                   label="Text"
+                  rows={4}
+                  value={item.body}
                   issue={findCompletenessIssue(issues, "body", blockId, item.id)}
-                >
-                  <Textarea
-                    rows={4}
-                    value={item.body}
-                    onChange={(event) => patch(item.id, { body: event.target.value })}
-                  />
-                </AdminField>
+                  lines
+                  hint={LINE_HINT}
+                  onChange={(body) => patch(item.id, { body })}
+                />
               </>
             ) : null}
             {structure ? (
@@ -4236,25 +4385,24 @@ function OfferingRows({
             </div>
             {content ? (
               <>
-                <AdminField
+                <FormattedText
                   label="Rubrik"
+                  rows={2}
+                  value={item.heading}
                   issue={findCompletenessIssue(issues, "heading", blockId, item.id)}
-                >
-                  <Input
-                    value={item.heading}
-                    onChange={(event) => patch(item.id, { heading: event.target.value })}
-                  />
-                </AdminField>
-                <AdminField
+                  lines
+                  hint={LINE_HINT}
+                  onChange={(heading) => patch(item.id, { heading })}
+                />
+                <FormattedText
                   label="Text"
+                  rows={4}
+                  value={item.body}
                   issue={findCompletenessIssue(issues, "body", blockId, item.id)}
-                >
-                  <Textarea
-                    rows={4}
-                    value={item.body}
-                    onChange={(event) => patch(item.id, { body: event.target.value })}
-                  />
-                </AdminField>
+                  lines
+                  hint={LINE_HINT}
+                  onChange={(body) => patch(item.id, { body })}
+                />
               </>
             ) : null}
             {structure ? (
@@ -4351,28 +4499,71 @@ function AddComponentDialog({
   );
 }
 
-function ColorSwatch({
+function TextColorFields({
+  block,
+  onChange,
+}: {
+  block: CmsBlock;
+  onChange: (patch: Partial<CmsBlock>) => void;
+}) {
+  const heading = showsHeadingColor(block.type);
+  const body = showsBodyColor(block.type);
+  if (!heading && !body) return null;
+  return (
+    <>
+      {heading ? (
+        <ColorSwatch
+          legend="Rubrikfärg"
+          value={block.headingColor ?? "auto"}
+          options={textColorSwatches}
+          onChange={(headingColor) =>
+            onChange({ headingColor: headingColor === "auto" ? undefined : headingColor })
+          }
+        />
+      ) : null}
+      {body ? (
+        <ColorSwatch
+          legend="Textfärg"
+          value={block.bodyColor ?? "auto"}
+          options={textColorSwatches}
+          onChange={(bodyColor) =>
+            onChange({ bodyColor: bodyColor === "auto" ? undefined : bodyColor })
+          }
+        />
+      ) : null}
+    </>
+  );
+}
+
+function ColorSwatch<T extends string>({
+  legend = "Bakgrundsfärg",
   value,
   onChange,
   options,
   aside,
 }: {
-  value: BlockTheme;
-  onChange: (theme: BlockTheme) => void;
-  options: { id: BlockTheme; label: string; color: string }[];
+  legend?: string;
+  value: T;
+  onChange: (value: T) => void;
+  options: { id: T; label: string; color: string }[];
   aside?: ReactNode;
 }) {
   return (
     <fieldset className="admin-swatches">
-      <legend>Bakgrund</legend>
+      <legend>{legend}</legend>
       <div className="admin-swatch-line">
         <div className="admin-swatch-dots">
           {options.map((theme) => (
             <button
               key={theme.id}
               type="button"
-              className={value === theme.id ? "is-active" : undefined}
-              style={{ background: theme.color }}
+              className={[
+                value === theme.id ? "is-active" : undefined,
+                theme.id === "auto" ? "is-auto" : undefined,
+              ]
+                .filter(Boolean)
+                .join(" ") || undefined}
+              style={theme.id === "auto" ? undefined : { background: theme.color }}
               aria-pressed={value === theme.id}
               aria-label={theme.label}
               title={theme.label}

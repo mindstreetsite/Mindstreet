@@ -1,0 +1,93 @@
+import {
+  applyChange,
+  conflictNotice,
+  diffStates,
+  hasConflicts,
+  isChangeEmpty,
+  jsonEqual,
+  type CmsChange,
+} from "./merge";
+import type { CmsState } from "./storage";
+import type { CmsPage } from "./types";
+
+function page(slug: string, heading: string, published = true): CmsPage {
+  return {
+    slug,
+    title: heading,
+    published,
+    links: [],
+    blocks: [{ id: `${slug}-block`, type: "text", heading, body: heading }],
+  };
+}
+
+function state(pages: CmsPage[], menu?: CmsState["menu"]): CmsState {
+  return {
+    pages,
+    archive: [],
+    templates: [],
+    templateArchive: [],
+    menu,
+  };
+}
+
+function assert(condition: boolean, message: string) {
+  if (!condition) throw new Error(message);
+}
+
+const contact = page("kontakta-oss", "Kontakta oss");
+const home = page("", "Startsida");
+const base = state([home, contact]);
+
+const anna = state([home, page("kontakta-oss", "Ny kontakt")]);
+const colleague = state([page("", "Ny startsida"), contact]);
+
+const annaChange = diffStates(base, anna);
+const colleagueChange = diffStates(base, colleague);
+
+assert(annaChange.pages.length === 1 && annaChange.pages[0].id === "kontakta-oss", "Anna diffs only contact");
+assert(colleagueChange.pages.length === 1 && colleagueChange.pages[0].id === "", "Colleague diffs only home");
+assert(isChangeEmpty(diffStates(base, base)), "Identical states send nothing");
+
+const afterAnna = applyChange(base, annaChange);
+assert(afterAnna.applied && !hasConflicts(afterAnna.conflicts), "Anna applies without conflict");
+assert(afterAnna.state.pages.find((item) => item.slug === "kontakta-oss")?.title === "Ny kontakt", "Contact updated");
+assert(afterAnna.state.pages.find((item) => item.slug === "")?.title === "Startsida", "Home left alone");
+
+const afterBoth = applyChange(afterAnna.state, colleagueChange);
+assert(afterBoth.applied && !hasConflicts(afterBoth.conflicts), "Different pages merge");
+assert(afterBoth.state.pages.find((item) => item.slug === "kontakta-oss")?.title === "Ny kontakt", "Anna's contact kept");
+assert(afterBoth.state.pages.find((item) => item.slug === "")?.title === "Ny startsida", "Colleague's home applied");
+
+const clash: CmsChange = {
+  pages: [
+    {
+      id: "kontakta-oss",
+      base: contact,
+      next: page("kontakta-oss", "Kollegans kontakt"),
+    },
+  ],
+  archive: [],
+  templates: [],
+  templateArchive: [],
+};
+const conflicted = applyChange(afterAnna.state, clash);
+assert(!conflicted.applied && hasConflicts(conflicted.conflicts), "Same page conflicts");
+assert(conflicted.conflicts.pages.includes("kontakta-oss"), "Conflict lists contact");
+assert(
+  conflicted.state.pages.find((item) => item.slug === "kontakta-oss")?.title === "Ny kontakt",
+  "Conflicting save is rejected",
+);
+assert(
+  conflictNotice(conflicted.conflicts, conflicted.state.pages).includes("Ny kontakt"),
+  "Notice names the page",
+);
+
+const already = applyChange(afterAnna.state, annaChange);
+assert(!already.applied && !hasConflicts(already.conflicts), "Idempotent retry applies nothing");
+assert(jsonEqual(already.state.pages, afterAnna.state.pages), "Idempotent retry keeps state");
+
+const trusted = applyChange(afterAnna.state, clash, true);
+assert(trusted.applied && !hasConflicts(trusted.conflicts), "Matching etag applies blindly");
+assert(trusted.state.pages.find((item) => item.slug === "kontakta-oss")?.title === "Kollegans kontakt", "Trusted write wins");
+
+console.log("cms merge ok");

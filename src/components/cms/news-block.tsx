@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
+import { HeadingText } from "@/lib/cms/inline";
 import { formatNewsDate } from "@/lib/cms/news-date";
 import type { CmsCard } from "@/lib/cms/types";
 
@@ -9,11 +10,15 @@ export function NewsBlock({
   items,
   preview = false,
   pageSize = 4,
+  className,
+  style,
 }: {
   heading: string;
   items: CmsCard[];
   preview?: boolean;
   pageSize?: number;
+  className?: string;
+  style?: CSSProperties;
 }) {
   const shown = preview ? items : items.filter((item) => item.published !== false);
   const [page, setPage] = useState(0);
@@ -23,9 +28,9 @@ export function NewsBlock({
   const showPager = shown.length > pageSize;
 
   return (
-    <section className="news">
+    <section className={className ?? "news"} style={style}>
       <div className="section-inner">
-        {heading ? <h2>{heading}</h2> : null}
+        {heading ? <HeadingText text={heading} as="h2" /> : null}
         <div className="news-grid">
           {visible.map((item) => (
             <article key={item.id}>
@@ -64,7 +69,9 @@ function NewsCard({ item, draft }: { item: CmsCard; draft: boolean }) {
   ) : (
     <div className="news-photo-fallback" />
   );
-  const title = item.heading ? <span className="news-card-title">{item.heading}</span> : null;
+  const title = item.heading ? (
+    <HeadingText text={item.heading} as="span" className="news-card-title" />
+  ) : null;
   const dateLabel = item.publishedAt ? formatNewsDate(item.publishedAt) : "";
   const date = dateLabel ? (
     <time className="news-card-date" dateTime={item.publishedAt}>

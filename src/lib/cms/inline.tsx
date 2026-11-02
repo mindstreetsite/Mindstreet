@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, type ElementType, type ReactNode } from "react";
 
 const pattern =
   /(\+\+([^+\n]+)\+\+)|(\*\*((?:[^*\n]|\*(?!\*))+)\*\*)|((?<!\*)\*(?!\*)([^*\n]+)\*(?!\*))|(\[([^\]\n]+)\]\(([^)\s]+)\))|(https?:\/\/[^\s)]+)/g;
@@ -51,26 +51,200 @@ export function renderInline(text: string): ReactNode[] {
   return nodes;
 }
 
-export type LineFormat = "bullet" | "number" | "heading";
+export function renderBreaks(text: string): ReactNode[] {
+  return text.split("\n").map((line, index) => (
+    <Fragment key={index}>
+      {index > 0 ? <br /> : null}
+      {renderInline(line)}
+    </Fragment>
+  ));
+}
+
+function splitParagraphs(body: string): string[] {
+  return body
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+}
+
+function classNames(...parts: Array<string | undefined | false>) {
+  return parts.filter(Boolean).join(" ");
+}
+
+export type ListMarker = "disc" | "circle" | "square" | "dash";
+export type LineFormat = ListMarker | "number" | "heading";
 export type TextStyle = "normal" | "heading";
+
+export const listMarkers: ListMarker[] = ["disc", "circle", "square", "dash"];
+
+const listPrefixes: Record<ListMarker, string> = {
+  disc: "- ",
+  circle: "+ ",
+  square: "* ",
+  dash: "-- ",
+};
+
+const lineMarker = /^(?:--\s+|\+\s+|\*\s+|-\s+|\d+\.\s+|#\s+)/;
+
+function lineMarkerKind(line: string): LineFormat | null {
+  if (/^#\s+/.test(line)) return "heading";
+  if (/^\d+\.\s+/.test(line)) return "number";
+  if (/^--\s+/.test(line)) return "dash";
+  if (/^-\s+/.test(line)) return "disc";
+  if (/^\+\s+/.test(line)) return "circle";
+  if (/^\*\s+/.test(line)) return "square";
+  return null;
+}
+
+function stripLineMarker(line: string) {
+  return line.trim().replace(lineMarker, "");
+}
+
+function hasLineFormat(text: string) {
+  return text.split("\n").some((line) => lineMarkerKind(line.trim()));
+}
+
+export function plainText(text: string): string {
+  return text
+    .split("\n")
+    .map((line) => unwrapInline(stripLineMarker(line)))
+    .filter(Boolean)
+    .join(" ");
+}
+
+type ListKind = ListMarker | "number";
+
+function isListKind(kind: LineFormat | null): kind is ListKind {
+  return kind !== null && kind !== "heading";
+}
+
+function RichBlocks({
+  text,
+  className,
+  paragraphAs: Tag = "p",
+}: {
+  text: string;
+  className?: string;
+  paragraphAs?: ElementType;
+}) {
+  const blocks: ReactNode[] = [];
+  let paragraph: string[] = [];
+  let list: { kind: ListKind; items: string[] } | null = null;
+  let key = 0;
+
+  function flushParagraph() {
+    if (paragraph.length === 0) return;
+    blocks.push(
+      <Tag key={key++} className={className || undefined}>
+        {renderBreaks(paragraph.join("\n"))}
+      </Tag>,
+    );
+    paragraph = [];
+  }
+
+  function flushList() {
+    if (!list) return;
+    const items = list.items.map((item, index) => <li key={index}>{renderInline(item)}</li>);
+    if (list.kind === "number") {
+      blocks.push(
+        <ol key={key++} className={classNames("cms-list", className)}>
+          {items}
+        </ol>,
+      );
+    } else {
+      blocks.push(
+        <ul key={key++} className={classNames("cms-list", `cms-list-${list.kind}`, className)}>
+          {items}
+        </ul>,
+      );
+    }
+    list = null;
+  }
+
+  for (const raw of text.split("\n")) {
+    const line = raw.trim();
+    if (!line) continue;
+    const kind = lineMarkerKind(line);
+    if (kind === "heading") {
+      flushParagraph();
+      flushList();
+      blocks.push(
+        <p key={key++} className={classNames("cms-article-subhead", className)}>
+          {renderInline(stripLineMarker(line))}
+        </p>,
+      );
+      continue;
+    }
+    if (isListKind(kind)) {
+      flushParagraph();
+      if (list && list.kind !== kind) flushList();
+      if (!list) list = { kind, items: [] };
+      list.items.push(stripLineMarker(line));
+      continue;
+    }
+    flushList();
+    paragraph.push(line);
+  }
+
+  flushParagraph();
+  flushList();
+  return <>{blocks}</>;
+}
+
+export function RichText({
+  text,
+  className,
+}: {
+  text: string;
+  className?: string;
+}) {
+  const paragraphs = splitParagraphs(text);
+  if (paragraphs.length === 0) return null;
+  return (
+    <>
+      {paragraphs.map((paragraph, index) => (
+        <RichBlocks key={index} text={paragraph} className={className} />
+      ))}
+    </>
+  );
+}
+
+export function HeadingText({
+  text,
+  as: Tag = "h2",
+  className,
+}: {
+  text: string;
+  as?: "h1" | "h2" | "h3" | "span";
+  className?: string;
+}) {
+  if (!hasLineFormat(text)) {
+    return <Tag className={className}>{renderBreaks(text)}</Tag>;
+  }
+  const paragraphs = splitParagraphs(text);
+  if (paragraphs.length === 0) return <Tag className={className} />;
+  return (
+    <>
+      {paragraphs.map((paragraph, index) =>
+        hasLineFormat(paragraph) ? (
+          <RichBlocks key={index} text={paragraph} className={className} paragraphAs={Tag} />
+        ) : (
+          <Tag key={index} className={className}>
+            {renderBreaks(paragraph)}
+          </Tag>
+        ),
+      )}
+    </>
+  );
+}
 
 export type SelectionFormat = {
   style: TextStyle;
   bold: boolean;
   italic: boolean;
   underline: boolean;
-  bullet: boolean;
-  number: boolean;
+  list: ListMarker | "number" | null;
 };
-
-const lineMarker = /^(?:-\s+|\d+\.\s+|#\s+)/;
-
-function lineMarkerKind(line: string): LineFormat | null {
-  if (/^-\s+/.test(line)) return "bullet";
-  if (/^\d+\.\s+/.test(line)) return "number";
-  if (/^#\s+/.test(line)) return "heading";
-  return null;
-}
 
 function lineBounds(value: string, start: number, end: number) {
   const from = Math.max(0, Math.min(Math.min(start, end), value.length));
@@ -92,7 +266,7 @@ function replaceLines(
   const { lineStart, lineEnd } = lineBounds(value, start, end);
   const insert = value.slice(lineStart, lineEnd).split("\n").map(mapLine).join("\n");
   return {
-    value: value.slice(0, lineStart) + insert + value.slice(lineEnd),
+    value: value.slice(0, lineStart) + insert + value.slice(end),
     start: lineStart,
     end: lineStart + insert.length,
   };
@@ -125,11 +299,11 @@ export function applyLineFormat(
   let number = 1;
   const nextLines = lines.map((line) => {
     if (!line.trim()) return line;
-    const text = line.trim().replace(lineMarker, "");
+    const text = stripLineMarker(line);
     if (remove) return text;
-    if (kind === "bullet") return `- ${text}`;
     if (kind === "heading") return `# ${text}`;
-    return `${number++}. ${text}`;
+    if (kind === "number") return `${number++}. ${text}`;
+    return `${listPrefixes[kind]}${text}`;
   });
   const insert = nextLines.join("\n");
   return {
@@ -148,8 +322,8 @@ export function applyTextStyle(
   return replaceLines(value, start, end, (line) => {
     if (!line.trim()) return line;
     const kind = lineMarkerKind(line.trim());
-    if (style === "heading") return `# ${line.trim().replace(lineMarker, "")}`;
-    if (kind === "heading") return line.trim().replace(lineMarker, "");
+    if (style === "heading") return `# ${stripLineMarker(line)}`;
+    if (kind === "heading") return stripLineMarker(line);
     return line;
   });
 }
@@ -162,7 +336,7 @@ export function clearFormatting(
   return replaceLines(value, start, end, (line) => {
     if (!line.trim()) return line;
     const kind = lineMarkerKind(line.trim());
-    const body = kind ? line.trim().replace(lineMarker, "") : line;
+    const body = kind ? stripLineMarker(line) : line;
     return unwrapInline(body);
   });
 }
@@ -200,14 +374,15 @@ export function inspectFormat(value: string, start: number, end: number): Select
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
-  const every = (kind: LineFormat) => active.length > 0 && active.every((line) => lineMarkerKind(line) === kind);
+  const kinds = active.map((line) => lineMarkerKind(line));
+  const first = kinds[0] ?? null;
+  const same = first !== null && kinds.every((kind) => kind === first);
   return {
-    style: every("heading") ? "heading" : "normal",
+    style: same && first === "heading" ? "heading" : "normal",
     bold: selectionHasMark(value, from, to, boldMark),
     italic: selectionHasMark(value, from, to, italicMark),
     underline: selectionHasMark(value, from, to, underlineMark),
-    bullet: every("bullet"),
-    number: every("number"),
+    list: same && first && first !== "heading" ? first : null,
   };
 }
 

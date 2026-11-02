@@ -12,6 +12,7 @@
   --charcoal-lys: #c4c4ca;
   --charcoal-mork: #1c1c22;
   --rust: #955035;
+  --brown: #b37c55;
   --rust-lys: #d6beaf;
   --rust-mork: #54301e;
   --sage: #719f8d;
@@ -245,7 +246,7 @@ p {
 
 .hero h1 {
   max-width: 8.2ch;
-  font-size: clamp(52px, 6.95vw, 100px);
+  font-size: clamp(28px, 6.95vw, 100px);
   font-weight: var(--weight-black);
   line-height: 1.12;
   letter-spacing: 0;
@@ -475,13 +476,20 @@ p {
   line-height: 1.33;
 }
 
-.intro p {
+.intro p,
+.intro ul,
+.intro ol {
   margin: 0 0 35px;
   font-size: 20px;
   line-height: 35px;
 }
 
-.intro p:last-child {
+.intro ul,
+.intro ol {
+  padding-left: 1.4em;
+}
+
+.intro :is(p, ul, ol):last-child {
   margin-bottom: 0;
 }
 
@@ -660,12 +668,23 @@ p {
   padding: 0 0 48px 85px;
 }
 
-.offering-body p {
+.offering-body p,
+.offering-body ul,
+.offering-body ol {
   margin-bottom: 28px;
   font-size: 20px;
   font-weight: var(--weight-regular);
   line-height: 35px;
   color: #000;
+}
+
+.offering-body ul,
+.offering-body ol {
+  padding-left: 1.4em;
+}
+
+.offering-body :is(p, ul, ol):last-child {
+  margin-bottom: 0;
 }
 
 .offering-link {
@@ -928,10 +947,19 @@ p {
   padding: 48px 24px;
 }
 
-.seminar-copy p {
+.seminar-copy p,
+.seminar-copy ul,
+.seminar-copy ol {
   font-size: clamp(20px, 2vw, 30px);
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.seminar-copy ul,
+.seminar-copy ol {
+  margin: 0;
+  padding-left: 1.4em;
+  text-align: left;
 }
 
 .seminar-copy h2 {
@@ -1021,18 +1049,83 @@ p {
 
 @media (max-width: 980px) {
   .hero {
-    height: 60vw;
+    height: max(520px, 60vw);
+    padding-top: 112px;
   }
 
   .hero-content {
     flex-direction: column;
     align-items: flex-start;
-    padding-bottom: 64px;
+    gap: 28px;
+    padding: 0 var(--gutter) 64px;
   }
 
   .hero-actions {
+    flex-shrink: 1;
     flex-wrap: wrap;
     gap: 16px;
+    max-width: 100%;
+  }
+
+  .hero > .menu-layer {
+    position: fixed;
+    inset: 0;
+  }
+
+  .menu-panel {
+    overflow: hidden;
+  }
+
+  .menu-panel > ul {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .menu-panel > ul > li + li {
+    margin-top: 28px;
+  }
+
+  .menu-panel > ul > li > a,
+  .menu-panel > ul > li > .menu-parent {
+    height: auto;
+    max-width: 100%;
+    font-size: clamp(28px, 4.5vw, 45px);
+    line-height: 1.15;
+    white-space: normal;
+  }
+
+  .menu-panel ul ul a {
+    font-size: clamp(20px, 3vw, 36px);
+    line-height: 1.2;
+  }
+
+  .intro {
+    padding: 72px var(--gutter) 80px;
+  }
+
+  .expertise {
+    padding: 64px 0 56px;
+  }
+
+  .expertise h2 {
+    margin-bottom: 40px;
+  }
+
+  .offering {
+    padding: 72px 0 64px;
+  }
+
+  .offering h2 {
+    margin-bottom: 40px;
+  }
+
+  .news {
+    padding: 72px 0 56px;
+  }
+
+  .news h2 {
+    margin-bottom: 32px;
   }
 
   .intro,
@@ -1101,21 +1194,116 @@ p {
 }
 
 @media (max-width: 640px) {
-  .hero {
-    height: 50vw;
+  .btn {
+    max-width: 100%;
+    height: auto;
+    min-height: 44px;
+    padding: 10px 22px;
+    white-space: normal;
+    text-align: center;
   }
 
-  .site-header {
-    padding-right: 24px;
+  .site-header,
+  .site-header.is-bar {
+    padding-left: var(--gutter);
+    padding-right: var(--gutter);
+  }
+
+  .logo-link img {
+    width: clamp(140px, 46vw, 239px);
+    height: auto;
   }
 
   .hero h1 {
     max-width: 10ch;
   }
 
+  .hero-actions .btn {
+    width: auto;
+    min-width: 0;
+    height: 48px;
+    padding: 0 20px;
+  }
+
+  .menu-panel {
+    padding: 96px var(--gutter) 32px;
+  }
+
+  .menu-panel > ul > li + li {
+    margin-top: 18px;
+  }
+
+  .intro {
+    padding: 56px var(--gutter) 64px;
+  }
+
+  .intro p,
+  .intro ul,
+  .intro ol,
+  .expertise-grid p,
+  .expertise-grid ul,
+  .expertise-grid ol,
+  .offering-body p,
+  .offering-body ul,
+  .offering-body ol,
+  .about-copy p {
+    font-size: 18px;
+    line-height: 1.55;
+  }
+
+  .expertise-grid article,
+  .expertise-grid article:nth-child(even) {
+    padding: 24px 36px 32px 0;
+  }
+
+  .about-inner {
+    padding-top: 48px;
+    padding-bottom: 48px;
+  }
+
+  .about-photo {
+    height: 280px;
+  }
+
+  .offering-list button {
+    min-height: 88px;
+    font-size: clamp(20px, 5vw, 26px);
+  }
+
+  .offering-list button span:first-child {
+    min-width: 0;
+    padding-right: 16px;
+  }
+
+  .news-grid {
+    gap: 32px;
+  }
+
   .news-grid a,
   .news-grid p,
   .news-grid .news-card-title {
     max-width: none;
+    font-size: clamp(18px, 4.5vw, 26px);
+  }
+
+  .seminar {
+    min-height: 420px;
+  }
+
+  .seminar.is-small {
+    min-height: 240px;
+  }
+
+  .seminar-copy h2 {
+    font-size: clamp(32px, 5.2vw, 75px);
+  }
+
+  .site-footer {
+    padding: 48px var(--gutter);
+  }
+
+  .site-footer address {
+    font-size: 18px;
+    line-height: 1.55;
   }
 }
