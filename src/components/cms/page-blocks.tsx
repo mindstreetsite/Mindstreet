@@ -63,17 +63,6 @@ export function PageBlocks({
       {newsFeed.length > 0 ? (
         <NewsBlock heading="Nyheter och artiklar" items={newsFeed} preview={preview} pageSize={12} />
       ) : null}
-      {page.links.length > 0 ? (
-        <nav className="cms-page-links" aria-label="Länkar">
-          <ul>
-            {page.links.map((link) => (
-              <li key={`${link.label}-${link.href}`}>
-                <a href={link.href}>{link.label}</a>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      ) : null}
       <SiteFooter />
     </div>
   );
