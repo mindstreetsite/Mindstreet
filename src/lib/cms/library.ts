@@ -10,7 +10,6 @@ export {
 } from "@/lib/design/palette";
 
 export const SITE_HOST = "www.mindstreet.se";
-export const SITE_HOME = `https://${SITE_HOST}`;
 
 const loremBody =
   "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.";

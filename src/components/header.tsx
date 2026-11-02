@@ -3,7 +3,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { menuItems } from "@/content/home";
-import { SITE_HOME } from "@/lib/cms/library";
 import { onDark, surfaceById } from "@/lib/design/palette";
 import type { BlockTheme } from "@/lib/cms/types";
 
@@ -182,7 +181,7 @@ export function Header({
             : undefined
         }
       >
-        <a href={SITE_HOME} className="logo-link">
+        <a href="/" className="logo-link">
           <img
             src={lightMarks ? "/icons/logo.svg" : "/icons/logo-gray.svg"}
             width={239}
