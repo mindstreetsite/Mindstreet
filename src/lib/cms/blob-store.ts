@@ -121,6 +121,18 @@ export async function readCmsState(): Promise<StoredCms> {
   return { state: seedState(), etag: null, empty: true };
 }
 
+export async function readCmsEtag(): Promise<string | null> {
+  noStore();
+  const latest = newestBlob(await listVersionBlobs());
+  if (latest) return latest.pathname;
+  try {
+    const legacy = await head(legacyPath());
+    return legacy.pathname;
+  } catch {
+    return null;
+  }
+}
+
 export async function updateCmsState(mutate: (state: CmsState) => CmsState): Promise<StoredCms> {
   let last = await readCmsState();
   for (let attempt = 0; attempt < WRITE_ATTEMPTS; attempt += 1) {

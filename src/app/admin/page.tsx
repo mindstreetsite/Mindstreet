@@ -75,9 +75,13 @@ import {
   usesExpandedTheme,
 } from "@/lib/cms/library";
 import {
+  absorbRemote,
   conflictNotice,
   diffStates,
+  hasConflicts,
   isChangeEmpty,
+  jsonEqual,
+  type AbsorbRemoteResult,
   type CmsConflicts,
 } from "@/lib/cms/merge";
 import {
@@ -488,11 +492,21 @@ export default function AdminPage() {
   const saveTimer = useRef<number | null>(null);
   const saveWaiters = useRef<Array<(error: string | null) => void>>([]);
   const draftKey = useRef<string | null>(null);
+  const draftBlocksRef = useRef(draftBlocks);
+  const titleInputRef = useRef(titleInput);
+  const parentSlugRef = useRef(parentSlug);
+  const createRoleRef = useRef(createRole);
+  const savingRef = useRef(false);
+  const pullRemoteRef = useRef<(etag: string | null) => void>(() => {});
   pagesRef.current = pages;
   archiveRef.current = archive;
   templatesRef.current = templates;
   templateArchiveRef.current = templateArchive;
   menuRef.current = menu;
+  draftBlocksRef.current = draftBlocks;
+  titleInputRef.current = titleInput;
+  parentSlugRef.current = parentSlug;
+  createRoleRef.current = createRole;
 
   function snapshot(): CmsState {
     return {
@@ -541,6 +555,88 @@ export default function AdminPage() {
     const page = pagesRef.current.find((entry) => entry.slug === slug);
     if (page) setDraftBlocks(structuredClone(pageDraft(page).blocks));
   }
+
+  function overlayOpenDraft(state: CmsState): CmsState {
+    const key = draftKey.current;
+    if (!key?.endsWith(":edit")) return state;
+    const slug = key.slice(0, -":edit".length);
+    const page = state.pages.find((entry) => entry.slug === slug);
+    if (!page) return state;
+    const confirmedPage = confirmedRef.current.pages.find((entry) => entry.slug === slug);
+    const confirmedDraft = confirmedPage ? pageDraft(confirmedPage) : page;
+    const title = titleInputRef.current.trim();
+    const parent = parentSlugRef.current || undefined;
+    const role = createRoleRef.current || undefined;
+    const blocksDirty = !jsonEqual(draftBlocksRef.current, confirmedDraft.blocks);
+    const metaDirty =
+      title !== (confirmedPage?.title ?? page.title) ||
+      (parent ?? "") !== (confirmedPage?.parentSlug ?? page.parentSlug ?? "") ||
+      (role ?? "") !== (confirmedPage?.role ?? page.role ?? "");
+    if (!blocksDirty && !metaDirty) return state;
+    return {
+      ...state,
+      pages: state.pages.map((entry) => {
+        if (entry.slug !== slug) return entry;
+        return {
+          ...entry,
+          title: metaDirty ? title : entry.title,
+          parentSlug: metaDirty ? parent : entry.parentSlug,
+          role: metaDirty ? role : entry.role,
+          pending: blocksDirty ? structuredClone(draftBlocksRef.current) : entry.pending,
+        };
+      }),
+    };
+  }
+
+  function applyAbsorbed(result: AbsorbRemoteResult, remoteEtag: string | null) {
+    applyState(result.state, result.advanceEtag ? remoteEtag : etagRef.current);
+    confirmedRef.current = result.confirmed;
+    const key = draftKey.current;
+    if (key?.endsWith(":edit")) {
+      const slug = key.slice(0, -":edit".length);
+      const page = result.state.pages.find((entry) => entry.slug === slug);
+      if (!page) {
+        draftKey.current = null;
+        setStructureSlug(null);
+        setTitleInput("");
+        setDraftBlocks([]);
+      } else if (!result.conflicts.pages.includes(slug)) {
+        const confirmedPage = result.confirmed.pages.find((entry) => entry.slug === slug);
+        if (jsonEqual(page, confirmedPage)) {
+          setDraftBlocks(structuredClone(pageDraft(page).blocks));
+          setTitleInput(page.title);
+          setParentSlug(page.parentSlug ?? "");
+          setCreateRole(page.role ?? "");
+          setPublished(page.published);
+        }
+      }
+    }
+    if (hasConflicts(result.conflicts)) {
+      setNotice(conflictNotice(result.conflicts, result.state.pages));
+    }
+  }
+
+  async function pullRemote(etag: string | null) {
+    if (savingRef.current) return;
+    if (etag === etagRef.current) return;
+    const response = await fetch("/api/cms", { cache: "no-store" });
+    if (response.status === 401) {
+      setPhase("locked");
+      return;
+    }
+    if (!response.ok || savingRef.current) return;
+    const data = (await response.json()) as { state?: unknown; etag?: string | null };
+    if (savingRef.current) return;
+    if (!data.state || typeof data.state !== "object") return;
+    const remoteEtag = data.etag ?? null;
+    if (remoteEtag === etagRef.current) return;
+    const remote = hydrateState({ ...data.state, seedVersion: SEED_VERSION });
+    applyAbsorbed(
+      absorbRemote(overlayOpenDraft(snapshot()), confirmedRef.current, remote),
+      remoteEtag,
+    );
+  }
+  pullRemoteRef.current = pullRemote;
 
   async function loadCms() {
     const response = await fetch("/api/cms", { cache: "no-store" });
@@ -619,6 +715,23 @@ export default function AdminPage() {
     // The loader only runs when the admin screen opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (phase !== "ready") return;
+    const source = new EventSource("/api/cms/stream");
+    source.onmessage = (event) => {
+      let payload: { etag?: string | null };
+      try {
+        payload = JSON.parse(event.data) as { etag?: string | null };
+      } catch {
+        return;
+      }
+      void pullRemoteRef.current(payload.etag ?? null);
+    };
+    return () => {
+      source.close();
+    };
+  }, [phase]);
 
   const selected = pages.find((page) => page.slug === selectedSlug) ?? null;
   const structurePage =
@@ -720,34 +833,48 @@ export default function AdminPage() {
       const sent = snapshot();
       const change = diffStates(confirmedRef.current, sent);
       if (isChangeEmpty(change)) return null;
-      const response = await fetch("/api/cms", {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ change, baseEtag: etagRef.current }),
-      });
-      const data = (await response.json().catch(() => null)) as {
-        etag?: string | null;
-        error?: string;
-        state?: unknown;
-        conflicts?: CmsConflicts;
-      } | null;
-      if (response.status === 409) {
-        if (data?.state && typeof data.state === "object") {
-          applyState(
-            hydrateState({ ...data.state, seedVersion: SEED_VERSION }),
-            data.etag ?? etagRef.current,
-          );
-          rememberConfirmed();
-          syncDraftFromPages();
+      savingRef.current = true;
+      try {
+        const response = await fetch("/api/cms", {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ change, baseEtag: etagRef.current }),
+        });
+        const data = (await response.json().catch(() => null)) as {
+          etag?: string | null;
+          error?: string;
+          state?: unknown;
+          conflicts?: CmsConflicts;
+        } | null;
+        if (response.status === 409) {
+          if (data?.state && typeof data.state === "object") {
+            applyState(
+              hydrateState({ ...data.state, seedVersion: SEED_VERSION }),
+              data.etag ?? etagRef.current,
+            );
+            rememberConfirmed();
+            syncDraftFromPages();
+          }
+          return data?.conflicts
+            ? conflictNotice(data.conflicts, pagesRef.current)
+            : (data?.error ?? "Innehållet har ändrats av någon annan.");
         }
-        return data?.conflicts
-          ? conflictNotice(data.conflicts, pagesRef.current)
-          : (data?.error ?? "Innehållet har ändrats av någon annan.");
+        if (!response.ok) return data?.error ?? "Kunde inte spara.";
+        if (data?.state && typeof data.state === "object") {
+          const remote = hydrateState({ ...data.state, seedVersion: SEED_VERSION });
+          const absorbed = absorbRemote(overlayOpenDraft(snapshot()), sent, remote);
+          applyAbsorbed(absorbed, data.etag ?? etagRef.current);
+          if (hasConflicts(absorbed.conflicts)) {
+            return conflictNotice(absorbed.conflicts, absorbed.state.pages);
+          }
+          return null;
+        }
+        if (data?.etag) etagRef.current = data.etag;
+        confirmedRef.current = structuredClone(sent);
+        return null;
+      } finally {
+        savingRef.current = false;
       }
-      if (!response.ok) return data?.error ?? "Kunde inte spara.";
-      if (data?.etag) etagRef.current = data.etag;
-      confirmedRef.current = structuredClone(sent);
-      return null;
     });
     saveChain.current = run.then(
       (error) => error,

@@ -1,4 +1,5 @@
 import {
+  absorbRemote,
   applyChange,
   conflictNotice,
   diffStates,
@@ -89,5 +90,28 @@ assert(jsonEqual(already.state.pages, afterAnna.state.pages), "Idempotent retry 
 const trusted = applyChange(afterAnna.state, clash, true);
 assert(trusted.applied && !hasConflicts(trusted.conflicts), "Matching etag applies blindly");
 assert(trusted.state.pages.find((item) => item.slug === "kontakta-oss")?.title === "Kollegans kontakt", "Trusted write wins");
+
+const absorbedPages = absorbRemote(anna, base, colleague);
+assert(!hasConflicts(absorbedPages.conflicts), "Different pages absorb without conflict");
+assert(absorbedPages.advanceEtag, "Different pages advance etag");
+assert(absorbedPages.state.pages.find((item) => item.slug === "kontakta-oss")?.title === "Ny kontakt", "Absorb keeps local contact");
+assert(absorbedPages.state.pages.find((item) => item.slug === "")?.title === "Ny startsida", "Absorb takes remote home");
+assert(absorbedPages.confirmed.pages.find((item) => item.slug === "kontakta-oss")?.title === "Kontakta oss", "Absorb keeps contact as save base");
+assert(absorbedPages.confirmed.pages.find((item) => item.slug === "")?.title === "Ny startsida", "Absorb confirms remote home");
+const absorbedDiff = diffStates(absorbedPages.confirmed, absorbedPages.state);
+assert(absorbedDiff.pages.length === 1 && absorbedDiff.pages[0].id === "kontakta-oss", "Next save only sends the dirty page");
+
+const absorbedDirty = absorbRemote(anna, base, base);
+assert(!hasConflicts(absorbedDirty.conflicts) && absorbedDirty.advanceEtag, "Dirty page stays without conflict");
+assert(absorbedDirty.state.pages.find((item) => item.slug === "kontakta-oss")?.title === "Ny kontakt", "Dirty contact is kept");
+assert(absorbedDirty.confirmed.pages.find((item) => item.slug === "kontakta-oss")?.title === "Kontakta oss", "Dirty contact base stays");
+
+const remoteClash = state([home, page("kontakta-oss", "Kollegans kontakt")]);
+const absorbedClash = absorbRemote(anna, base, remoteClash);
+assert(hasConflicts(absorbedClash.conflicts), "Same page absorb conflicts");
+assert(absorbedClash.conflicts.pages.includes("kontakta-oss"), "Absorb conflict lists contact");
+assert(!absorbedClash.advanceEtag, "Same page absorb does not advance etag");
+assert(absorbedClash.state.pages.find((item) => item.slug === "kontakta-oss")?.title === "Ny kontakt", "Absorb conflict keeps local draft");
+assert(absorbedClash.confirmed.pages.find((item) => item.slug === "kontakta-oss")?.title === "Kontakta oss", "Absorb conflict keeps old base");
 
 console.log("cms merge ok");

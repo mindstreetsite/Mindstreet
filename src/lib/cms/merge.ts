@@ -42,6 +42,13 @@ export type ApplyChangeResult = {
   applied: boolean;
 };
 
+export type AbsorbRemoteResult = {
+  state: CmsState;
+  confirmed: CmsState;
+  conflicts: CmsConflicts;
+  advanceEtag: boolean;
+};
+
 export function emptyChange(): CmsChange {
   return {
     pages: [],
@@ -229,6 +236,145 @@ export function applyChange(
       templates.applied ||
       templateArchive.applied ||
       menuApplied,
+  };
+}
+
+function absorbItems<T>(
+  local: T[],
+  confirmed: T[],
+  remote: T[],
+  idOf: (item: T) => string,
+): { items: T[]; confirmed: T[]; conflicts: string[] } {
+  const localMap = new Map(local.map((item) => [idOf(item), item]));
+  const confirmedMap = new Map(confirmed.map((item) => [idOf(item), item]));
+  const remoteMap = new Map(remote.map((item) => [idOf(item), item]));
+  const ids = new Set([...localMap.keys(), ...confirmedMap.keys(), ...remoteMap.keys()]);
+
+  const nextMap = new Map<string, T | null>();
+  const confirmedNextMap = new Map<string, T | null>();
+  const conflicts: string[] = [];
+
+  for (const id of ids) {
+    const base = confirmedMap.get(id) ?? null;
+    const ours = localMap.get(id) ?? null;
+    const theirs = remoteMap.get(id) ?? null;
+    if (jsonEqual(ours, theirs) || jsonEqual(ours, base)) {
+      nextMap.set(id, theirs);
+      confirmedNextMap.set(id, theirs);
+      continue;
+    }
+    if (jsonEqual(theirs, base)) {
+      nextMap.set(id, ours);
+      confirmedNextMap.set(id, base);
+      continue;
+    }
+    nextMap.set(id, ours);
+    confirmedNextMap.set(id, base);
+    conflicts.push(id);
+  }
+
+  function assemble(source: T[], map: Map<string, T | null>, extra: T[]): T[] {
+    const items: T[] = [];
+    const seen = new Set<string>();
+    for (const item of source) {
+      const id = idOf(item);
+      const value = map.get(id);
+      if (!value) continue;
+      items.push(value);
+      seen.add(id);
+    }
+    for (const item of extra) {
+      const id = idOf(item);
+      if (seen.has(id)) continue;
+      const value = map.get(id);
+      if (!value) continue;
+      items.push(value);
+      seen.add(id);
+    }
+    return items;
+  }
+
+  return {
+    items: assemble(remote, nextMap, local),
+    confirmed: assemble(remote, confirmedNextMap, confirmed),
+    conflicts,
+  };
+}
+
+function absorbMenu(
+  local: CmsLink[] | undefined,
+  confirmed: CmsLink[] | undefined,
+  remote: CmsLink[] | undefined,
+): { menu: CmsLink[] | undefined; confirmed: CmsLink[] | undefined; conflict: boolean } {
+  const ours = resolvedMenu(local);
+  const base = resolvedMenu(confirmed);
+  const theirs = resolvedMenu(remote);
+  if (jsonEqual(ours, theirs) || jsonEqual(ours, base)) {
+    return { menu: remote, confirmed: remote, conflict: false };
+  }
+  if (jsonEqual(theirs, base)) {
+    return { menu: local, confirmed, conflict: false };
+  }
+  return { menu: local, confirmed, conflict: true };
+}
+
+function finishState(
+  pages: CmsPage[],
+  archive: PageArchiveEntry[],
+  templates: CmsTemplate[],
+  templateArchive: TemplateArchiveEntry[],
+  menu: CmsLink[] | undefined,
+): CmsState {
+  return {
+    pages,
+    archive,
+    templates: templatesNotMatchingPages(templates, pages),
+    templateArchive: templateArchive.filter((entry) => !entry.hiddenPage),
+    menu,
+  };
+}
+
+export function absorbRemote(local: CmsState, confirmed: CmsState, remote: CmsState): AbsorbRemoteResult {
+  const pages = absorbItems(local.pages, confirmed.pages, remote.pages, (page) => page.slug);
+  const archive = absorbItems(local.archive, confirmed.archive, remote.archive, (entry) => entry.id);
+  const templates = absorbItems(
+    local.templates,
+    confirmed.templates,
+    remote.templates,
+    (template) => template.slug,
+  );
+  const templateArchive = absorbItems(
+    local.templateArchive,
+    confirmed.templateArchive,
+    remote.templateArchive,
+    (entry) => entry.id,
+  );
+  const menu = absorbMenu(local.menu, confirmed.menu, remote.menu);
+  const conflicts: CmsConflicts = {
+    pages: pages.conflicts,
+    archive: archive.conflicts,
+    templates: templates.conflicts,
+    templateArchive: templateArchive.conflicts,
+    menu: menu.conflict,
+  };
+
+  return {
+    state: finishState(
+      pages.items,
+      archive.items,
+      templates.items,
+      templateArchive.items,
+      menu.menu,
+    ),
+    confirmed: finishState(
+      pages.confirmed,
+      archive.confirmed,
+      templates.confirmed,
+      templateArchive.confirmed,
+      menu.confirmed,
+    ),
+    conflicts,
+    advanceEtag: !hasConflicts(conflicts),
   };
 }
 
