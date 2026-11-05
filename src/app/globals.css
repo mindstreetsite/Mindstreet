@@ -27,6 +27,7 @@
   --white: #fff;
   --figure: #e8f0f4;
   --indigo: #21134d;
+  --black: #000;
   --cream: var(--rust-lys);
   --on-dark: var(--white);
   --on-light: var(--indigo);

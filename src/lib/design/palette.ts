@@ -22,6 +22,8 @@ export const color = {
   figure: "#E8F0F4",
   /** Figma heading and body ink. Also an article background, with white text. */
   indigo: "#21134D",
+  /** Text and heading swatch only. Not a module background. */
+  black: "#000000",
   navyLys: "#CBD9E3",
   navyMork: "#060E14",
   steelLys: "#C5D3DB",
@@ -122,6 +124,7 @@ export const textColorSwatches: TextSwatch[] = [
   { id: "auto", label: "Automatisk", color: "" },
   ...surfaces.map((item) => ({ id: item.id, label: item.label, color: item.color })),
   { id: "indigo", label: "Indigo", color: color.indigo },
+  { id: "black", label: "Svart", color: color.black },
 ];
 
 const textColorById = new Map(textColorSwatches.map((item) => [item.id, item]));

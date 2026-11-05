@@ -11,7 +11,7 @@ Read [src/lib/design/palette.ts](src/lib/design/palette.ts) before any color cha
 
 1. Use a semantic role or an allowed surface. Do not add a new hex in `admin.css` or `page-blocks.css`.
 2. Block backgrounds come only from `themesFor(type)` / `swatchesFor(type, current)`.
-3. Text on a surface uses that surface's `on` color by default (`headingColor` / `bodyColor` = `auto`). Light surfaces use Indigo (`--indigo`, `#21134D`), the Figma heading and body color. Dark surfaces use white. Rubrikfärg, textfärg, and every block background use the same palette. Backgrounds omit Automatisk. Indigo is included, with white text.
+3. Text on a surface uses that surface's `on` color by default (`headingColor` / `bodyColor` = `auto`). Light surfaces use Indigo (`--indigo`, `#21134D`), the Figma heading and body color. Dark surfaces use white. Rubrikfärg and textfärg use the same palette as block backgrounds, plus Svart (`--black`, `#000000`). Backgrounds omit Automatisk and Svart. Indigo is included, with white text.
 4. Lys/Mörk tones (`navyLys`, `rustMork`, …) are chrome, text, and borders. They are not module swatches.
 5. A color change updates both `palette.ts` and the matching CSS variables.
 6. Do not add a color that is missing from the Figma Test-page palette without asking.

@@ -43,7 +43,7 @@ export type BlockTheme =
   | "blush"
   | "indigo";
 
-export type TextColor = "auto" | BlockTheme;
+export type TextColor = "auto" | BlockTheme | "black";
 
 /** Colors available for the decorative figure. `veil` is white at 10% opacity. */
 export type ShapeColor = "haze" | "linen" | "veil";
