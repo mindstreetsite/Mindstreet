@@ -237,7 +237,13 @@ p {
   background: var(--header-surface, var(--white));
 }
 
+.site-header.is-bar:not(.is-pinned) {
+  z-index: auto;
+}
+
 .site-header.is-bar .site-header-inner {
+  position: relative;
+  z-index: 6;
   padding: 47px var(--gutter) 40px;
 }
 
