@@ -190,13 +190,28 @@ p {
 .hero-shape {
   position: absolute;
   left: 74%;
-  top: 72%;
+  top: 58%;
   width: 1839.89px;
   height: 1054.1px;
   max-width: none;
   transform: translate(-50%, -50%) rotate(-90deg) scale(1.2);
   pointer-events: none;
   z-index: 0;
+  background: color-mix(in srgb, var(--white) 10%, transparent);
+  -webkit-mask: url("/icons/hero-shape.svg") center / 100% 100% no-repeat;
+  mask: url("/icons/hero-shape.svg") center / 100% 100% no-repeat;
+}
+
+.hero-shape.is-figure-haze {
+  background: var(--figure);
+}
+
+.hero-shape.is-figure-linen {
+  background: color-mix(in srgb, var(--linen) 30%, transparent);
+}
+
+.hero-shape.is-figure-veil {
+  background: color-mix(in srgb, var(--white) 10%, transparent);
 }
 
 .site-header {

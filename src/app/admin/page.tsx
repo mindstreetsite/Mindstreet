@@ -3074,11 +3074,14 @@ function BlockFieldsEditor({
   const linkPages = pages ?? [];
   const savedHrefListed = linkPages.some((page) => `/${page.slug}` === savedHref);
   const imageIssue = findCompletenessIssue(issues, "image", block.id);
-  const figureOn = usesExpandedTheme(block.type)
-    ? block.type === "contactUs"
-      ? (block.shape ?? true)
-      : (block.shape ?? resolveTheme(block) === "mist")
-    : false;
+  const heroVector = block.type === "hero" && block.shape === true;
+  const figureOn =
+    heroVector ||
+    (usesExpandedTheme(block.type)
+      ? block.type === "contactUs"
+        ? (block.shape ?? true)
+        : (block.shape ?? resolveTheme(block) === "mist")
+      : false);
   const image2Issue = findCompletenessIssue(issues, "image2", block.id);
   if (block.type === "banner") {
     return (
@@ -3195,10 +3198,17 @@ function BlockFieldsEditor({
           }
         />
       ) : null}
+      {structure && block.type === "hero" ? (
+        <FieldSwitch
+          label="Vector"
+          checked={block.shape === true}
+          onChange={(shape) => onChange({ shape: shape ? true : undefined })}
+        />
+      ) : null}
       {structure && figureOn ? (
         <ColorSwatch
           legend="Figurfärg"
-          value={block.shapeColor ?? "haze"}
+          value={block.type === "hero" ? (block.shapeColor ?? "veil") : (block.shapeColor ?? "haze")}
           options={figureSwatches}
           onChange={(shapeColor) => onChange({ shapeColor })}
         />
@@ -3301,11 +3311,6 @@ function BlockFieldsEditor({
       ) : null}
       {structure && block.type === "hero" ? (
         <>
-          <FieldSwitch
-            label="Vector"
-            checked={block.shape === true}
-            onChange={(shape) => onChange({ shape: shape ? true : undefined })}
-          />
           <AdminField label="Knapp">
             <Input
               value={block.buttonLabel ?? ""}

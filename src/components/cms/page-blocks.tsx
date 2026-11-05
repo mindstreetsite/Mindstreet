@@ -114,7 +114,10 @@ function BlockView({
         )}
         <div className="hero-shade" />
         {block.shape ? (
-          <img className="hero-shape" src="/icons/hero-shape.svg" alt="" />
+          <div
+            className={figureClass("hero-shape", block.shapeColor ?? "veil")}
+            aria-hidden="true"
+          />
         ) : null}
         {withHeader ? <Header items={menu} /> : null}
         <div className="hero-content">
