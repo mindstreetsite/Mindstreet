@@ -33,7 +33,7 @@ ul.cms-list-dash > li::before {
 .cms-text-column {
   max-width: calc(834px + 2 * var(--gutter));
   margin: 0 auto;
-  padding: 72px var(--gutter) 88px;
+  padding: 144px var(--gutter) 176px;
   color: var(--on-light);
   font-family: var(--font-sans);
   font-style: normal;
@@ -135,7 +135,7 @@ ul.cms-list-dash > li::before {
 }
 
 .cms-image + .cms-text-column {
-  padding-top: 48px;
+  padding-top: 192px;
 }
 
 .cms-hero h1 {
@@ -1306,7 +1306,7 @@ ol.cms-contact-cards-text {
   }
 
   .cms-text-column {
-    padding: 56px var(--gutter) 64px;
+    padding: 112px var(--gutter) 128px;
   }
 
   .cms-divider {
@@ -1366,7 +1366,7 @@ ol.cms-contact-cards-text {
   }
 
   .cms-text-column {
-    padding: 40px var(--gutter) 48px;
+    padding: 80px var(--gutter) 96px;
   }
 
   .cms-text-column-section + .cms-text-column-section {

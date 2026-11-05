@@ -497,6 +497,7 @@ p {
   position: absolute;
   top: 42px;
   right: 48px;
+  z-index: 1;
   width: 32px;
   height: 32px;
   border: 0;
@@ -513,10 +514,11 @@ p {
 
 .menu-close span {
   position: absolute;
-  left: 0;
-  top: 14px;
+  left: 50%;
+  top: 50%;
   width: 32px;
   height: 2px;
+  margin: -1px 0 0 -16px;
   border-radius: 2px;
   background: var(--navy);
 }

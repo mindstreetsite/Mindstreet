@@ -16,8 +16,16 @@ export function Header({
   items?: { label: string; href: string; children?: { label: string; href: string }[] }[];
 }) {
   const headerRef = useRef<HTMLElement>(null);
+  const layerRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const [closePos, setClosePos] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const [open, setOpen] = useState(false);
   const [rendered, setRendered] = useState(false);
   const [openIndex, setOpenIndex] = useState<number | null>(null);
@@ -90,6 +98,29 @@ export function Header({
     };
   }, [rendered]);
 
+  useLayoutEffect(() => {
+    if (!rendered) return;
+
+    const placeClose = () => {
+      const button = menuButtonRef.current;
+      const panel = panelRef.current;
+      const layer = layerRef.current;
+      if (!button || !panel || !layer) return;
+      const buttonRect = button.getBoundingClientRect();
+      const layerRect = layer.getBoundingClientRect();
+      setClosePos({
+        top: buttonRect.top - layerRect.top - panel.offsetTop,
+        left: buttonRect.left - layerRect.left - panel.offsetLeft,
+        width: buttonRect.width,
+        height: buttonRect.height,
+      });
+    };
+
+    placeClose();
+    window.addEventListener("resize", placeClose);
+    return () => window.removeEventListener("resize", placeClose);
+  }, [rendered]);
+
   useEffect(() => {
     if (!rendered) return;
 
@@ -139,15 +170,26 @@ export function Header({
 
   const hero = !pinned && !bar && rendered ? headerRef.current?.closest(".hero") : null;
   const menuLayer = rendered ? (
-    <div className={open ? "menu-layer is-open" : "menu-layer"}>
+    <div ref={layerRef} className={open ? "menu-layer is-open" : "menu-layer"}>
       <button type="button" className="menu-backdrop" aria-label="Stäng meny" onClick={closeMenu} />
-      <nav className="menu-panel" aria-label="Huvudmeny" aria-hidden={!open} inert={!open}>
+      <nav ref={panelRef} className="menu-panel" aria-label="Huvudmeny" aria-hidden={!open} inert={!open}>
         <button
           ref={closeButtonRef}
           type="button"
           className="menu-close"
           aria-label="Stäng meny"
           onClick={closeMenu}
+          style={
+            closePos
+              ? {
+                  top: closePos.top,
+                  left: closePos.left,
+                  width: closePos.width,
+                  height: closePos.height,
+                  right: "auto",
+                }
+              : undefined
+          }
         >
           <span />
           <span />
