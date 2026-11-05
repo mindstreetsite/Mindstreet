@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { RememberPublicPath } from "@/components/remember-public-path";
 import { SITE_ORIGIN } from "@/lib/cms/library";
 import { jsonLdHtml, organizationJsonLd, SITE_DESCRIPTION, SITE_NAME } from "@/lib/cms/seo";
 import { lato } from "@/lib/design/lato";
@@ -26,6 +27,7 @@ export default function RootLayout({
   return (
     <html lang="sv" className={lato.variable}>
       <body>
+        <RememberPublicPath />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: jsonLdHtml(organizationJsonLd()) }}

@@ -21,11 +21,14 @@ export function Header({
   const [open, setOpen] = useState(false);
   const [rendered, setRendered] = useState(false);
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const [pinned, setPinned] = useState(false);
+  const [slotHeight, setSlotHeight] = useState(0);
   const openedRef = useRef(false);
   const openFrameRef = useRef(0);
+  const pinnedRef = useRef(false);
   const bar = variant === "bar";
   const surface = theme ? surfaceById(theme) : undefined;
-  const lightMarks = surface ? surface.on === onDark : !bar;
+  const lightMarks = surface ? surface.on === onDark : !bar && !pinned;
   const configured = (items ?? [])
     .map((item) => ({
       label: item.label.trim(),
@@ -103,7 +106,38 @@ export function Header({
     closeButtonRef.current?.focus({ preventScroll: true });
   }, [open]);
 
-  const hero = !bar && rendered ? headerRef.current?.closest(".hero") : null;
+  useEffect(() => {
+    const node = headerRef.current;
+    if (!node?.isConnected) return;
+    if (node.closest(".admin-miniature-page, .admin-menu-preview")) return;
+
+    let frame = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const current = headerRef.current;
+        const y = window.scrollY;
+        const height = current?.offsetHeight ?? 0;
+        const revealAfter = Math.max(height + 96, 180);
+        const next = pinnedRef.current ? y > 1 : y > revealAfter;
+        if (next === pinnedRef.current) return;
+        if (next && bar) setSlotHeight(height || 120);
+        pinnedRef.current = next;
+        setPinned(next);
+      });
+    };
+
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("scrollend", onScroll);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("scrollend", onScroll);
+    };
+  }, [bar]);
+
+  const hero = !pinned && !bar && rendered ? headerRef.current?.closest(".hero") : null;
   const menuLayer = rendered ? (
     <div className={open ? "menu-layer is-open" : "menu-layer"}>
       <button type="button" className="menu-backdrop" aria-label="Stäng meny" onClick={closeMenu} />
@@ -166,14 +200,14 @@ export function Header({
     </div>
   ) : null;
 
-  return (
+  const header = (
     <>
       <header
         ref={headerRef}
         className={
           bar
-            ? `site-header is-bar${surface ? ` cms-theme-${surface.id}` : ""}${lightMarks ? " is-on-dark" : ""}`
-            : "site-header"
+            ? `site-header is-bar${surface ? ` cms-theme-${surface.id}` : ""}${lightMarks ? " is-on-dark" : ""}${pinned ? " is-pinned" : ""}`
+            : `site-header${pinned ? " is-pinned" : ""}`
         }
         style={
           surface
@@ -181,32 +215,43 @@ export function Header({
             : undefined
         }
       >
-        <a href="/" className="logo-link">
-          <img
-            src={lightMarks ? "/icons/logo.svg" : "/icons/logo-gray.svg"}
-            width={239}
-            height={46}
-            alt="Mindstreet"
-          />
-        </a>
-        <button
-          type="button"
-          ref={menuButtonRef}
-          className="menu-button"
-          aria-label="Öppna meny"
-          aria-expanded={open}
-          onClick={openMenu}
-        >
-          <img
-            src={lightMarks ? "/icons/menu.svg" : "/icons/menu-gray.svg"}
-            width={37.41}
-            height={32}
-            alt=""
-          />
-        </button>
+        <div className="site-header-inner">
+          <a href="/" className="logo-link">
+            <img
+              src={lightMarks ? "/icons/logo.svg" : "/icons/logo-gray.svg"}
+              width={239}
+              height={46}
+              alt="Mindstreet"
+            />
+          </a>
+          <button
+            type="button"
+            ref={menuButtonRef}
+            className="menu-button"
+            aria-label="Öppna meny"
+            aria-expanded={open}
+            onClick={openMenu}
+          >
+            <img
+              src={lightMarks ? "/icons/menu.svg" : "/icons/menu-gray.svg"}
+              width={37.41}
+              height={32}
+              alt=""
+            />
+          </button>
+        </div>
         {hero ? null : menuLayer}
       </header>
       {hero && menuLayer ? createPortal(menuLayer, hero) : null}
+    </>
+  );
+
+  return (
+    <>
+      {bar && pinned ? (
+        <div className="site-header-slot" style={{ height: slotHeight }} aria-hidden="true" />
+      ) : null}
+      {pinned ? createPortal(header, document.body) : header}
     </>
   );
 }

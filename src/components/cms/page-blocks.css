@@ -42,6 +42,11 @@ ul.cms-list-dash > li::before {
   line-height: 35px;
 }
 
+.cms-text-column-section {
+  position: relative;
+  z-index: 1;
+}
+
 .cms-text-column-section + .cms-text-column-section {
   margin-top: 56px;
 }
@@ -97,6 +102,8 @@ ul.cms-list-dash > li::before {
 }
 
 .cms-image {
+  position: relative;
+  z-index: 1;
   max-width: var(--content);
   margin: 0 auto;
   padding: 72px 106px;
@@ -204,7 +211,7 @@ ul.cms-list-dash > li::before {
 
 .cms-media {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   color: var(--on-light);
 }
 
@@ -319,7 +326,7 @@ ul.cms-list-dash > li::before {
 
 .cms-surface {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   color: var(--on-light);
 }
 
@@ -413,20 +420,24 @@ ul.cms-list-dash > li::before {
 
 .cms-media-shape {
   position: absolute;
-  left: 50%;
-  top: 0;
-  width: 1440px;
-  height: 833px;
+  /* Same anchor as the old 1440px figure, but the full swirl (viewBox 2296×1368) can run to the edges and past them. */
+  left: calc(50% - 720px);
+  top: -32px;
+  width: 2296px;
+  height: 1368px;
   max-width: none;
-  transform: translateX(-50%);
   pointer-events: none;
-  -webkit-mask: url("/icons/about-shape.svg") center / 100% 100% no-repeat;
-  mask: url("/icons/about-shape.svg") center / 100% 100% no-repeat;
+  -webkit-mask: url("/icons/about-shape-full.svg") left top / 100% 100% no-repeat;
+  mask: url("/icons/about-shape-full.svg") left top / 100% 100% no-repeat;
+}
+
+#top {
+  overflow-x: clip;
 }
 
 .cms-media-shape,
 .cms-contact-us-shape {
-  background: var(--figure);
+  background: color-mix(in srgb, var(--figure) 70%, transparent);
   mask-mode: alpha;
 }
 
@@ -441,12 +452,13 @@ ul.cms-list-dash > li::before {
 }
 
 .cms-media-shape.is-left {
-  transform: translateX(-50%) scaleX(-1);
+  transform: scaleX(-1);
+  transform-origin: 720px center;
 }
 
 .cms-media-shape.is-text {
-  top: -150px;
-  transform: translateX(calc(-50% - 220px));
+  left: calc(50% - 940px);
+  top: -322px;
 }
 
 .cms-media-inner {
@@ -598,6 +610,10 @@ ol.cms-contact-cards-text {
   margin-bottom: 0;
 }
 
+.cms-contact-card-grid .cms-contact-email {
+  margin-top: 12px;
+}
+
 .cms-contact-icon {
   display: block;
   width: 22px;
@@ -691,7 +707,7 @@ ol.cms-contact-cards-text {
   position: relative;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
   padding: 96px var(--gutter);
   color: var(--on-light);
 }
@@ -781,12 +797,18 @@ ol.cms-contact-cards-text {
   color: var(--on-light);
 }
 
+.cms-article-back-bar {
+  max-width: var(--content);
+  margin: 0 auto;
+  padding: 48px var(--gutter) 0;
+}
+
 .cms-article-back {
   display: inline-flex;
   align-items: center;
   gap: 13px;
   margin: 0;
-  padding: 48px var(--gutter) 0;
+  padding: 0;
   color: inherit;
   font-size: 16px;
   font-weight: var(--weight-regular);
@@ -846,10 +868,10 @@ ol.cms-contact-cards-text {
 
 .cms-article .cms-media-photo {
   display: block;
-  width: min(1228px, calc(100% - 212px));
+  width: min(1228px, calc(100% - 212px), calc(48vh * 1228 / 751));
   height: auto;
-  max-height: none;
-  margin: 0 auto 32px;
+  max-height: 48vh;
+  margin: 0 auto 64px;
   aspect-ratio: 1228 / 751;
   object-fit: cover;
   border-radius: 20px;
@@ -895,13 +917,17 @@ ol.cms-contact-cards-text {
 }
 
 .cms-article blockquote {
-  margin: 28px 0 28px 1px;
+  margin: 28px 0 112px 1px;
   padding: 4px 0 4px 62px;
   border-left: 3px solid var(--navy);
   color: inherit;
   font-family: var(--font-sans);
   font-style: italic;
   font-weight: var(--weight-regular);
+}
+
+.cms-article-copy p + blockquote {
+  margin-top: 104px;
 }
 
 .cms-article-copy .cms-article-quote-text {
@@ -949,7 +975,7 @@ ol.cms-contact-cards-text {
 }
 
 .cms-article-copy .cms-article-quote-credit {
-  margin: 56px 0 0;
+  margin: 80px 0 0;
   color: #777;
   font-family: var(--font-sans);
   font-style: italic;
@@ -1317,7 +1343,7 @@ ol.cms-contact-cards-text {
   }
 
   .cms-article .cms-media-photo {
-    width: calc(100% - 2 * var(--gutter));
+    width: min(calc(100% - 2 * var(--gutter)), calc(48vh * 1228 / 751));
   }
 }
 
@@ -1419,7 +1445,12 @@ ol.cms-contact-cards-text {
   }
 
   .cms-article blockquote {
+    margin-bottom: 56px;
     padding: 4px 0 4px 24px;
+  }
+
+  .cms-article-copy p + blockquote {
+    margin-top: 48px;
   }
 
   .cms-article-copy .cms-article-quote-text,

@@ -45,8 +45,38 @@ export type BlockTheme =
 
 export type TextColor = "auto" | BlockTheme | "black";
 
-/** Colors available for the decorative figure. `veil` is white at 10% opacity. */
-export type ShapeColor = "haze" | "linen" | "veil";
+/**
+ * Colors available for the decorative figure.
+ * `linen` and `veil` stay as they are. `haze` is the light blue figure at 70%.
+ * Later colors are palette hues: dark surfaces at 50% with a 25% pair,
+ * other surfaces at 30% with a 15% pair.
+ */
+export type ShapeColor =
+  | "haze"
+  | "linen"
+  | "veil"
+  | "navy"
+  | "navySoft"
+  | "steel"
+  | "steelSoft"
+  | "slate"
+  | "slateSoft"
+  | "charcoal"
+  | "charcoalSoft"
+  | "rust"
+  | "rustSoft"
+  | "sage"
+  | "sageSoft"
+  | "indigo"
+  | "indigoSoft"
+  | "coral"
+  | "coralSoft"
+  | "brown"
+  | "brownSoft"
+  | "ice"
+  | "iceSoft"
+  | "cream"
+  | "creamSoft";
 
 export type CmsCard = {
   id: string;

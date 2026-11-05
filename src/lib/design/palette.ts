@@ -129,11 +129,48 @@ export const textColorSwatches: TextSwatch[] = [
 
 const textColorById = new Map(textColorSwatches.map((item) => [item.id, item]));
 
+function figureMix(value: string, percent: number): string {
+  return `color-mix(in srgb, ${value} ${percent}%, transparent)`;
+}
+
+/** Dark surfaces sit at 50%, with a more transparent 25% pair. */
+function darkFigure(id: ShapeColor, softId: ShapeColor, label: string, value: string) {
+  return [
+    { id, label: `${label} 50 %`, color: figureMix(value, 50) },
+    { id: softId, label: `${label} 25 %`, color: figureMix(value, 25) },
+  ];
+}
+
+/** Other surfaces sit at 30%, with a more transparent 15% pair. */
+function lightFigure(id: ShapeColor, softId: ShapeColor, label: string, value: string) {
+  return [
+    { id, label: `${label} 30 %`, color: figureMix(value, 30) },
+    { id: softId, label: `${label} 15 %`, color: figureMix(value, 15) },
+  ];
+}
+
 export const figureSwatches: { id: ShapeColor; label: string; color: string }[] = [
-  { id: "haze", label: "Ljusblå", color: color.figure },
+  { id: "haze", label: "Ljusblå 70 %", color: figureMix(color.figure, 70) },
   { id: "linen", label: "Linne 30 %", color: `color-mix(in srgb, ${color.linen} 30%, transparent)` },
   { id: "veil", label: "Vit 10 %", color: "rgba(255, 255, 255, 0.1)" },
+  ...darkFigure("navy", "navySoft", "Marinblå", color.navy),
+  ...darkFigure("steel", "steelSoft", "Stålblå", color.steel),
+  ...darkFigure("slate", "slateSoft", "Slate", color.slate),
+  ...darkFigure("charcoal", "charcoalSoft", "Mörkgrå", color.charcoal),
+  ...darkFigure("rust", "rustSoft", "Rost", color.rust),
+  ...darkFigure("sage", "sageSoft", "Sage", color.sage),
+  ...darkFigure("indigo", "indigoSoft", "Indigo", color.indigo),
+  ...lightFigure("coral", "coralSoft", "Coral", color.coral),
+  ...lightFigure("brown", "brownSoft", "Brun", color.brown),
+  ...lightFigure("ice", "iceSoft", "Ice", color.ice),
+  ...lightFigure("cream", "creamSoft", "Grädde", color.rustLys),
 ];
+
+const figureFillById = new Map(figureSwatches.map((item) => [item.id, item.color]));
+
+export function figureFill(id?: ShapeColor): string {
+  return figureFillById.get(id ?? "haze") ?? figureMix(color.figure, 70);
+}
 
 export function resolveTextColor(id?: TextColor): string | undefined {
   if (!id || id === "auto") return undefined;

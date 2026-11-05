@@ -1,10 +1,11 @@
+import { ArticleBackLink } from "@/components/cms/article-back-link";
 import { ContactFormFields } from "@/components/cms/contact-form";
 import { NewsBlock } from "@/components/cms/news-block";
 import { OfferingBlock } from "@/components/cms/offering-block";
 import { Header } from "@/components/header";
 import { SiteFooter } from "@/components/site-footer";
 import { blockSurfaceProps } from "@/lib/cms/block-style";
-import { surfaceById } from "@/lib/design/palette";
+import { figureFill, surfaceById } from "@/lib/design/palette";
 import { HeadingText, plainText, renderBreaks, renderInline, RichText } from "@/lib/cms/inline";
 import { articleParagraphs, quoteAfterIndex, resolveTheme } from "@/lib/cms/library";
 import { formatNewsDate } from "@/lib/cms/news-date";
@@ -116,6 +117,7 @@ function BlockView({
         {block.shape ? (
           <div
             className={figureClass("hero-shape", block.shapeColor ?? "veil")}
+            style={figureStyle(block.shapeColor ?? "veil")}
             aria-hidden="true"
           />
         ) : null}
@@ -265,10 +267,12 @@ function BlockView({
     const dateLabel = formatNewsDate(articleDate);
     return (
       <ThemedSurface block={block}>
-        <a className="cms-article-back" href={articleBackHref(block.parentSlug, parentHref)}>
-          <ArticleBackIcon />
-          Tillbaka
-        </a>
+        <div className="cms-article-back-bar">
+          <ArticleBackLink href={articleBackHref(block.parentSlug, parentHref)}>
+            <ArticleBackIcon />
+            Tillbaka
+          </ArticleBackLink>
+        </div>
         <article className="cms-article">
           <div className="cms-article-intro">
             {block.heading ? <HeadingText text={block.heading} as="h2" /> : null}
@@ -378,7 +382,6 @@ function BlockView({
               <article key={item.id}>
                 {item.image ? <img className="cms-contact-card-photo" src={item.image} alt="" /> : null}
                 <ContactDetailList
-                  icons
                   name={item.contactName}
                   title={item.contactTitle}
                   email={item.contactEmail}
@@ -396,7 +399,11 @@ function BlockView({
     return (
       <div {...blockSurfaceProps(block, `cms-contact-us cms-theme-${theme}`)}>
         {(block.shape ?? true) ? (
-          <div className={figureClass("cms-contact-us-shape", block.shapeColor)} aria-hidden="true" />
+          <div
+            className={figureClass("cms-contact-us-shape", block.shapeColor)}
+            style={figureStyle(block.shapeColor)}
+            aria-hidden="true"
+          />
         ) : null}
         <Header variant="bar" items={menu} />
         <div className="intro">
@@ -484,6 +491,10 @@ function figureClass(base: string, color?: ShapeColor) {
   return `${base} is-figure-${color ?? "haze"}`;
 }
 
+function figureStyle(color?: ShapeColor): React.CSSProperties {
+  return { background: figureFill(color) };
+}
+
 function ModuleShape({
   align,
   variant,
@@ -500,7 +511,7 @@ function ModuleShape({
   ]
     .filter(Boolean)
     .join(" ");
-  return <div className={className} aria-hidden="true" />;
+  return <div className={className} style={figureStyle(color)} aria-hidden="true" />;
 }
 
 function contactHref(value: string) {
@@ -536,7 +547,7 @@ function ContactDetailList({
       {lines.name ? <li className="cms-contact-name">{lines.name}</li> : null}
       {lines.title ? <li>{lines.title}</li> : null}
       {lines.email ? (
-        <li>
+        <li className="cms-contact-email">
           <a href={`mailto:${lines.email}`}>
             {icons ? <MailIcon /> : null}
             {lines.email}

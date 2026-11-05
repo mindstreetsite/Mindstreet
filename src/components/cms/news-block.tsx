@@ -2,7 +2,6 @@
 
 import { useState, type CSSProperties } from "react";
 import { HeadingText } from "@/lib/cms/inline";
-import { formatNewsDate } from "@/lib/cms/news-date";
 import type { CmsCard } from "@/lib/cms/types";
 
 export function NewsBlock({
@@ -72,12 +71,6 @@ function NewsCard({ item, draft }: { item: CmsCard; draft: boolean }) {
   const title = item.heading ? (
     <HeadingText text={item.heading} as="span" className="news-card-title" />
   ) : null;
-  const dateLabel = item.publishedAt ? formatNewsDate(item.publishedAt) : "";
-  const date = dateLabel ? (
-    <time className="news-card-date" dateTime={item.publishedAt}>
-      {dateLabel}
-    </time>
-  ) : null;
   const badge = draft ? <span className="news-card-draft">Utkast</span> : null;
 
   if (!href) {
@@ -85,7 +78,6 @@ function NewsCard({ item, draft }: { item: CmsCard; draft: boolean }) {
       <div className="news-card">
         {badge}
         {photo}
-        {date}
         {title}
       </div>
     );
@@ -95,7 +87,6 @@ function NewsCard({ item, draft }: { item: CmsCard; draft: boolean }) {
     <a className="news-card" href={href}>
       {badge}
       {photo}
-      {date}
       {title}
     </a>
   );
