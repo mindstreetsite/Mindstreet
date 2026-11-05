@@ -458,7 +458,8 @@ ul.cms-list-dash > li::before {
 
 .cms-media-shape.is-text {
   left: calc(50% - 940px);
-  top: -340px;
+  /* The text block starts below the in-flow header. Pull the figure up so the visible curves meet that header. */
+  top: -520px;
 }
 
 .cms-media-inner {
