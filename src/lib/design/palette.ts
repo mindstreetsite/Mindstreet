@@ -18,6 +18,8 @@ export const color = {
   ice: "#C4DBE5",
   blush: "rgba(225, 188, 171, 0.4)",
   white: "#FFFFFF",
+  /** Figma heading and body ink. Also an article background, with white text. */
+  indigo: "#21134D",
   navyLys: "#CBD9E3",
   navyMork: "#060E14",
   steelLys: "#C5D3DB",
@@ -34,7 +36,7 @@ export const color = {
 export const leftoverSwatches = ["#C9856F", "#829D8F", "#C6B99E"] as const;
 
 export const onDark = color.white;
-export const onLight = color.navy;
+export const onLight = color.indigo;
 
 export type Surface = {
   id: BlockTheme;
@@ -50,6 +52,7 @@ const darkTextSurfaces = new Set<BlockTheme>([
   "charcoal",
   "rust",
   "sage",
+  "indigo",
 ]);
 
 function surface(id: BlockTheme, label: string, value: string): Surface {
@@ -81,7 +84,12 @@ export const surfaces: Surface[] = [
   surface("blush", "Blush", color.blush),
 ];
 
-const surfacesById = new Map(surfaces.map((item) => [item.id, item]));
+const indigoSurface = surface("indigo", "Indigo", color.indigo);
+
+const surfacesById = new Map<BlockTheme, Surface>([
+  ...surfaces.map((item) => [item.id, item] as const),
+  [indigoSurface.id, indigoSurface],
+]);
 
 export function surfaceById(id: BlockTheme): Surface | undefined {
   return surfacesById.get(id);
@@ -127,6 +135,7 @@ export type TextSwatch = {
 export const textColorSwatches: TextSwatch[] = [
   { id: "auto", label: "Automatisk", color: "" },
   ...surfaces.map((item) => ({ id: item.id, label: item.label, color: item.color })),
+  { id: "indigo", label: "Indigo", color: color.indigo },
 ];
 
 const textColorById = new Map(textColorSwatches.map((item) => [item.id, item]));
@@ -136,9 +145,13 @@ export function resolveTextColor(id?: TextColor): string | undefined {
   return textColorById.get(id)?.color;
 }
 
-const imageTextSurfaces: BlockTheme[] = ["fog", "ice", "ink", "blush", "coral", "sage"];
+/** Every background in the palette. */
+const imageTextSurfaces: BlockTheme[] = surfaces.map((item) => item.id);
 
 const textSurfaces: BlockTheme[] = ["white", "fog", "mist", "linen", "blush", "sand"];
+
+/** Same palette as rubrikfärg and textfärg, without Automatisk. */
+const articleSurfaces: BlockTheme[] = [...surfaces.map((item) => item.id), "indigo"];
 
 const statementSurfaces: BlockTheme[] = [...textSurfaces, "ink", "charcoal", "rust"];
 
@@ -151,7 +164,7 @@ const themesByType: Partial<Record<BlockType, BlockTheme[]>> = {
   imagePair: moduleSurfaces,
   text: textSurfaces,
   contactUs: contactSurfaces,
-  article: textSurfaces,
+  article: articleSurfaces,
   sectionHeader: textSurfaces,
   statement: statementSurfaces,
   pageHeader: pageHeaderSurfaces,

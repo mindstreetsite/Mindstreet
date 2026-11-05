@@ -1278,9 +1278,14 @@ export default function AdminPage() {
     if (deleteSlug === null) return;
     const address = pageAddress(deleteSlug);
     if (!addressMatches(deleteInput, address)) return;
+    const removingNews = pagesRef.current.some(
+      (page) => page.slug === deleteSlug && isArticlePage(page),
+    );
     const result = deletePagesToArchive(deleteSlug, pagesRef.current, archiveRef.current);
     if (result.error || !result.next || !result.archive) {
-      setNotice(result.error ?? "Kunde inte ta bort sidan.");
+      setNotice(
+        result.error ?? (removingNews ? "Kunde inte ta bort nyheten." : "Kunde inte ta bort sidan."),
+      );
       return;
     }
     const removed = pagesRemovedWith(deleteSlug, pagesRef.current);
@@ -1295,6 +1300,19 @@ export default function AdminPage() {
     setArchive(result.archive);
     if (await saveNow()) return;
     closeDelete();
+    if (removingNews) {
+      if (newsEditSlug && removed.some((page) => page.slug === newsEditSlug)) {
+        setNewsEditSlug(null);
+      }
+      if (structureSlug && removed.some((page) => page.slug === structureSlug)) {
+        setStructureSlug(null);
+      }
+      if (selectedSlug && removed.some((page) => page.slug === selectedSlug)) {
+        setSelectedSlug(orderedPages(result.next)[0]?.slug ?? null);
+      }
+      setNotice("Nyheten är borttagen och ligger under Borttagna sidor och mallar.");
+      return;
+    }
     setStructureSlug(null);
     setSelectedSlug(orderedPages(result.next)[0]?.slug ?? null);
     setNotice("Sidan är borttagen och ligger under Borttagna sidor och mallar.");
@@ -1847,10 +1865,6 @@ export default function AdminPage() {
                           mode="full"
                           issues={selectedIssues}
                           pages={pages}
-                          parents={rootPages(pages).filter(
-                            (page) => page.slug && page.slug !== selected.slug,
-                          )}
-                          pageParentSlug={selected.parentSlug ?? ""}
                           onChange={(id, patch) => updateBlock(id, patch)}
                           onImage={(id, src, field) => updateBlock(id, { [field]: src })}
                           onItems={(id, items) => updateBlock(id, { items })}
@@ -2135,16 +2149,26 @@ export default function AdminPage() {
                             mode="content"
                             issues={newsIssues}
                             pages={pages}
-                            parents={rootPages(pages).filter(
-                              (page) => page.slug && page.slug !== newsArticle.slug,
-                            )}
-                            pageParentSlug={newsArticle.parentSlug ?? ""}
                             onChange={(id, patch) => updateBlock(id, patch)}
                             onImage={(id, src, field) => updateBlock(id, { [field]: src })}
                             onItems={(id, items) => updateBlock(id, { items })}
                           />
                         )}
                         <LockedFooterNote />
+                      </section>
+                      <section className="admin-danger" aria-label="Ta bort nyhet">
+                        <h3>Ta bort nyheten</h3>
+                        <p>
+                          Nyheten försvinner från webbplatsen. En kopia sparas under Borttagna sidor
+                          och mallar och kan återställas.
+                        </p>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          onClick={() => openDelete(newsArticle.slug)}
+                        >
+                          Ta bort nyhet
+                        </Button>
                       </section>
                     </section>
                   ) : menuSelected ? (
@@ -2282,8 +2306,6 @@ export default function AdminPage() {
                               mode="full"
                               issues={createIssues}
                               pages={pages}
-                              parents={formParents}
-                              pageParentSlug={createRole === "home" ? "" : parentSlug}
                               onChange={(id, patch) => updateDraftBlock(id, patch)}
                               onImage={(id, src, field) => updateDraftBlock(id, { [field]: src })}
                               onItems={(id, items) => updateDraftBlock(id, { items })}
@@ -2577,6 +2599,7 @@ export default function AdminPage() {
       </div>
       {pendingDelete ? (
         <DeletePageDialog
+          mode={isArticlePage(pendingDelete) ? "news" : "page"}
           title={pageTitle(pendingDelete)}
           address={pageAddress(pendingDelete.slug)}
           childCount={Math.max(0, pendingRemoved.length - 1)}
@@ -2811,8 +2834,6 @@ function PageBlockList({
   mode,
   issues = [],
   pages,
-  parents,
-  pageParentSlug = "",
   onChange,
   onImage,
   onItems,
@@ -2823,8 +2844,6 @@ function PageBlockList({
   mode: EditorMode;
   issues?: CompletenessIssue[];
   pages: CmsPage[];
-  parents?: CmsPage[];
-  pageParentSlug?: string;
   onChange: (id: string, patch: Partial<CmsBlock>) => void;
   onImage: (id: string, src: string, field: "image" | "image2") => void;
   onItems: (id: string, items: CmsCard[]) => void;
@@ -2867,9 +2886,7 @@ function PageBlockList({
             issues={issues}
             onChange={(patch) => onChange(block.id, patch)}
             onImage={(src, field) => onImage(block.id, src, field)}
-            parents={parents}
             pages={pages}
-            pageParentSlug={pageParentSlug}
           />
           {block.type === "expertise" ? (
             <ExpertiseCards
@@ -2919,18 +2936,14 @@ function BlockFieldsEditor({
   issues = [],
   onChange,
   onImage,
-  parents,
   pages,
-  pageParentSlug = "",
   mode = "full",
 }: {
   block: CmsBlock;
   issues?: CompletenessIssue[];
   onChange: (patch: Partial<CmsBlock>) => void;
   onImage: (src: string, field: "image" | "image2") => void;
-  parents?: CmsPage[];
   pages?: CmsPage[];
-  pageParentSlug?: string;
   mode?: EditorMode;
 }) {
   const content = showsContent(mode);
@@ -3046,23 +3059,6 @@ function BlockFieldsEditor({
 
   return (
     <>
-      {structure && block.type === "article" && parents ? (
-        <label>
-          Förälder
-          <AdminSelect
-            wide
-            value={block.parentSlug !== undefined ? block.parentSlug : pageParentSlug}
-            onChange={(parentSlug) => onChange({ parentSlug })}
-            options={[
-              { value: "", label: "Ingen" },
-              ...parents.map((page) => ({
-                value: page.slug,
-                label: pageLinkLabel(page),
-              })),
-            ]}
-          />
-        </label>
-      ) : null}
       {structure && fields.theme ? (
         <ColorSwatch
           legend="Bakgrundsfärg"
@@ -3510,21 +3506,17 @@ function DeletePageDialog({
         <h2 id="delete-page-title">Ta bort {title}?</h2>
         <p>
           Skriv <strong>{address}</strong> för att bekräfta.{" "}
-          {mode === "news" ? (
-            "Nyheten tas bort från sidan."
-          ) : (
-            <>
-              {mode === "template"
-                ? "Mallen tas bort från listan. Sidor som redan finns påverkas inte."
-                : childCount > 0
-                  ? `Sidan och ${childCount} ${childCount === 1 ? "undersida" : "undersidor"} tas bort från webbplatsen.`
-                  : "Sidan tas bort från webbplatsen."}{" "}
-              Kopian sparas i arkivet.
-            </>
-          )}
+          {mode === "template"
+            ? "Mallen tas bort från listan. Sidor som redan finns påverkas inte."
+            : mode === "news"
+              ? "Nyheten tas bort från webbplatsen."
+              : childCount > 0
+                ? `Sidan och ${childCount} ${childCount === 1 ? "undersida" : "undersidor"} tas bort från webbplatsen.`
+                : "Sidan tas bort från webbplatsen."}{" "}
+          Kopian sparas i arkivet.
         </p>
         <label>
-          {mode === "news" ? "Rubrik" : mode === "template" ? "Mallnamn" : "Adress"}
+          {mode === "template" ? "Mallnamn" : "Adress"}
           <Input
             ref={inputRef}
             value={value}

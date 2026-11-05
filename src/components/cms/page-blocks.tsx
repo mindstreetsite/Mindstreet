@@ -126,7 +126,7 @@ function BlockView({
 
   if (block.type === "text") {
     return (
-      <ThemedSurface block={block}>
+      <ThemedSurface block={block} shape="text">
         <div className="intro">
           <div>
             <HeadingText text={block.heading} as="h2" />
@@ -448,23 +448,32 @@ function CardArrow({ heading, href }: { heading: string; href: string }) {
 function ThemedSurface({
   block,
   children,
+  shape,
 }: {
   block: CmsBlock;
   children: React.ReactNode;
+  shape?: "text";
 }) {
   const theme = resolveTheme(block);
   return (
     <section {...blockSurfaceProps(block, `cms-surface cms-theme-${theme}`)}>
-      {(block.shape ?? theme === "mist") ? <ModuleShape /> : null}
+      {(block.shape ?? theme === "mist") ? <ModuleShape variant={shape} /> : null}
       <div className="cms-surface-inner">{children}</div>
     </section>
   );
 }
 
-function ModuleShape({ align }: { align?: "left" }) {
+function ModuleShape({ align, variant }: { align?: "left"; variant?: "text" }) {
+  const className = [
+    "cms-media-shape",
+    align === "left" ? "is-left" : "",
+    variant === "text" ? "is-text" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
   return (
     <img
-      className={align === "left" ? "cms-media-shape is-left" : "cms-media-shape"}
+      className={className}
       src="/icons/about-shape.svg"
       width={1440}
       height={833}

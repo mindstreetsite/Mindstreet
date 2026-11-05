@@ -25,9 +25,10 @@
   --ice: #c4dbe5;
   --blush: rgba(225, 188, 171, 0.4);
   --white: #fff;
+  --indigo: #21134d;
   --cream: var(--rust-lys);
   --on-dark: var(--white);
-  --on-light: var(--navy);
+  --on-light: var(--indigo);
   --canvas: var(--fog-lys);
   --paper: var(--white);
   --rail: var(--navy);
@@ -67,7 +68,7 @@ html {
 
 body {
   margin: 0;
-  color: var(--ink);
+  color: var(--on-light);
   background: #fff;
   font-family: var(--font-sans);
   font-weight: var(--weight-regular);
@@ -130,13 +131,13 @@ p {
 }
 
 .btn-dark {
-  color: #122d2d;
-  border-color: #000;
+  color: var(--indigo);
+  border-color: var(--indigo);
 }
 
 .btn-dark:hover {
-  background: #000;
-  color: #fff;
+  background: var(--indigo);
+  color: var(--on-dark);
 }
 
 .btn-cream {
@@ -685,7 +686,7 @@ p {
   font-size: 20px;
   font-weight: var(--weight-regular);
   line-height: 35px;
-  color: #000;
+  color: var(--on-light);
 }
 
 .offering-body ul,
@@ -701,9 +702,9 @@ p {
   min-width: 0;
   height: 44px;
   padding: 0 22px;
-  border: 1px solid #000;
+  border: 1px solid var(--on-light);
   border-radius: 37px;
-  color: #000;
+  color: var(--on-light);
   background: transparent;
   font-size: 16px;
   font-weight: var(--weight-regular);
@@ -711,8 +712,8 @@ p {
 }
 
 .offering-link:hover {
-  background: #000;
-  color: #fff;
+  background: var(--on-light);
+  color: var(--on-dark);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -851,7 +852,7 @@ p {
 .news-grid .news-card-date {
   display: block;
   margin: 18px 0 0;
-  color: #000;
+  color: var(--on-light);
   font-size: 16px;
   font-weight: var(--weight-regular);
   letter-spacing: 0;
@@ -863,7 +864,7 @@ p {
   display: inline-block;
   margin-top: 22px;
   max-width: 22ch;
-  color: #000;
+  color: var(--on-light);
   font-weight: var(--weight-regular);
   font-size: clamp(22px, 2.1vw, 30px);
   letter-spacing: -1px;

@@ -40,7 +40,8 @@ export type BlockTheme =
   | "rust"
   | "brown"
   | "ice"
-  | "blush";
+  | "blush"
+  | "indigo";
 
 export type TextColor = "auto" | BlockTheme;
 

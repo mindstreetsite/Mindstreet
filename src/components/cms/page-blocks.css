@@ -34,7 +34,7 @@ ul.cms-list-dash > li::before {
   max-width: calc(834px + 2 * var(--gutter));
   margin: 0 auto;
   padding: 72px var(--gutter) 88px;
-  color: var(--text);
+  color: var(--on-light);
   font-family: var(--font-sans);
   font-style: normal;
   font-size: 20px;
@@ -48,7 +48,7 @@ ul.cms-list-dash > li::before {
 
 .cms-text-column h2 {
   margin: 0 0 18px;
-  color: var(--text);
+  color: var(--on-light);
   font-family: inherit;
   font-size: 30px;
   font-style: normal;
@@ -58,7 +58,7 @@ ul.cms-list-dash > li::before {
 
 .cms-text-column p {
   margin: 0 0 28px;
-  color: var(--text);
+  color: var(--on-light);
   font-family: inherit;
   font-size: 20px;
   font-style: normal;
@@ -293,6 +293,11 @@ ul.cms-list-dash > li::before {
   color: var(--on-light);
 }
 
+.cms-theme-indigo {
+  background: var(--indigo);
+  color: var(--on-dark);
+}
+
 .about.cms-theme-sand { background: var(--sand); }
 .about.cms-theme-mist { background: var(--mist); }
 .about.cms-theme-cream { background: var(--cream); }
@@ -310,6 +315,7 @@ ul.cms-list-dash > li::before {
 .about.cms-theme-brown { background: var(--brown); }
 .about.cms-theme-ice { background: var(--ice); }
 .about.cms-theme-blush { background: var(--blush); }
+.about.cms-theme-indigo { background: var(--indigo); }
 
 .cms-surface {
   position: relative;
@@ -323,6 +329,7 @@ ul.cms-list-dash > li::before {
 .cms-surface.cms-theme-charcoal,
 .cms-surface.cms-theme-rust,
 .cms-surface.cms-theme-sage,
+.cms-surface.cms-theme-indigo,
 .cms-media.cms-theme-slate,
 .cms-media.cms-theme-ink,
 .cms-media.cms-theme-steel,
@@ -361,7 +368,7 @@ ul.cms-list-dash > li::before {
 .cms-media.cms-theme-rust .btn-dark:hover,
 .cms-media.cms-theme-sage .btn-dark:hover {
   background: var(--on-dark);
-  color: var(--navy);
+  color: var(--on-light);
 }
 
 .cms-surface-inner {
@@ -410,6 +417,11 @@ ul.cms-list-dash > li::before {
 
 .cms-media-shape.is-left {
   transform: translateX(-50%) scaleX(-1);
+}
+
+.cms-media-shape.is-text {
+  top: -40px;
+  transform: translateX(calc(-50% + 88px));
 }
 
 .cms-media-inner {
@@ -635,7 +647,7 @@ ol.cms-contact-cards-text {
   max-width: var(--content);
   margin: 0 auto;
   padding: 72px var(--gutter) 24px;
-  color: var(--navy);
+  color: var(--on-light);
 }
 
 .cms-divider-inner h2 {
@@ -656,7 +668,7 @@ ol.cms-contact-cards-text {
   flex-direction: column;
   overflow: hidden;
   padding: 96px var(--gutter);
-  color: var(--navy);
+  color: var(--on-light);
 }
 
 .cms-statement.is-left {
@@ -707,9 +719,9 @@ ol.cms-contact-cards-text {
   min-width: 0;
   height: 44px;
   padding: 0 26px;
-  border: 1px solid var(--navy);
+  border: 1px solid var(--on-light);
   border-radius: 37px;
-  color: var(--navy);
+  color: var(--on-light);
   background: transparent;
   font-size: 15px;
   font-weight: var(--weight-regular);
@@ -718,7 +730,7 @@ ol.cms-contact-cards-text {
 
 .cms-statement .cms-statement-link:hover,
 .cms-contact-cards .cms-statement-link:hover {
-  background: var(--navy);
+  background: var(--on-light);
   color: var(--on-dark);
 }
 
@@ -739,7 +751,7 @@ ol.cms-contact-cards-text {
 .cms-statement.cms-theme-rust .cms-statement-link:hover,
 .cms-statement.cms-theme-sage .cms-statement-link:hover {
   background: var(--on-dark);
-  color: var(--navy);
+  color: var(--on-light);
 }
 
 .cms-article-back {
@@ -748,7 +760,7 @@ ol.cms-contact-cards-text {
   gap: 13px;
   margin: 0;
   padding: 48px var(--gutter) 0;
-  color: #122d2d;
+  color: inherit;
   font-size: 16px;
   font-weight: var(--weight-regular);
   line-height: 19px;
@@ -759,7 +771,7 @@ ol.cms-contact-cards-text {
   display: block;
   width: 24px;
   height: 24px;
-  color: #000;
+  color: inherit;
 }
 
 .cms-article {
@@ -783,7 +795,7 @@ ol.cms-contact-cards-text {
 
 .cms-article h2 {
   margin-bottom: 28px;
-  color: #000;
+  color: inherit;
   font-family: var(--font-sans);
   font-style: normal;
   font-weight: var(--weight-regular);
@@ -818,7 +830,7 @@ ol.cms-contact-cards-text {
 
 .cms-article-copy p {
   margin: 0 0 28px;
-  color: #000;
+  color: inherit;
   font-family: var(--font-sans);
   font-style: normal;
   font-weight: var(--weight-regular);
@@ -830,7 +842,7 @@ ol.cms-contact-cards-text {
 .cms-article-copy ol {
   margin: 0 0 28px;
   padding-left: 1.4em;
-  color: #000;
+  color: inherit;
   font-family: var(--font-sans);
   font-size: 20px;
   font-weight: var(--weight-regular);
@@ -869,7 +881,7 @@ ol.cms-contact-cards-text {
   margin: 0;
   padding: 0;
   border: 0;
-  color: #000;
+  color: inherit;
   font-style: italic;
   font-size: 30px;
   line-height: 56px;
@@ -880,7 +892,7 @@ ol.cms-contact-cards-text {
 .cms-article-copy .cms-article-quote-text ul,
 .cms-article-copy .cms-article-quote-text ol {
   margin: 0 0 56px;
-  color: #000;
+  color: inherit;
   font-family: var(--font-sans);
   font-style: italic;
   font-weight: var(--weight-regular);
@@ -1090,7 +1102,7 @@ ol.cms-contact-cards-text {
   border-bottom: 1px solid color-mix(in srgb, var(--charcoal) 32%, transparent);
   border-radius: 0;
   background: transparent;
-  color: var(--navy);
+  color: var(--on-light);
   font: inherit;
   font-size: 15px;
   font-weight: var(--weight-regular);
@@ -1118,7 +1130,7 @@ ol.cms-contact-cards-text {
 .cms-contact-form-card input:focus,
 .cms-contact-form-card textarea:focus {
   outline: none;
-  border-bottom-color: var(--navy);
+  border-bottom-color: var(--on-light);
 }
 
 .cms-contact-form-card input:focus-visible,
@@ -1129,8 +1141,8 @@ ol.cms-contact-cards-text {
 
 .cms-contact-form-card input:-webkit-autofill,
 .cms-contact-form-card textarea:-webkit-autofill {
-  -webkit-text-fill-color: var(--navy);
-  caret-color: var(--navy);
+  -webkit-text-fill-color: var(--on-light);
+  caret-color: var(--on-light);
   box-shadow: 0 0 0 1000px var(--linen) inset;
 }
 
@@ -1139,10 +1151,10 @@ ol.cms-contact-cards-text {
   min-width: 0;
   height: 40px;
   padding: 0 22px;
-  border: 1px solid var(--navy);
+  border: 1px solid var(--on-light);
   border-radius: 37px;
   background: transparent;
-  color: var(--navy);
+  color: var(--on-light);
   font: inherit;
   font-size: 15px;
   font-weight: var(--weight-regular);
@@ -1151,7 +1163,7 @@ ol.cms-contact-cards-text {
 }
 
 .cms-contact-form-submit:hover {
-  background: var(--navy);
+  background: var(--on-light);
   color: var(--on-dark);
 }
 

@@ -11,7 +11,7 @@ Read [src/lib/design/palette.ts](src/lib/design/palette.ts) before any color cha
 
 1. Use a semantic role or an allowed surface. Do not add a new hex in `admin.css` or `page-blocks.css`.
 2. Block backgrounds come only from `themesFor(type)` / `swatchesFor(type, current)`.
-3. Text on a surface uses that surface's `on` color by default (`headingColor` / `bodyColor` = `auto`). Editors can override with every surface in `textColorSwatches`, the same palette as background colors, plus Brun (`--brown`, Figma Accents/Brown).
+3. Text on a surface uses that surface's `on` color by default (`headingColor` / `bodyColor` = `auto`). Light surfaces use Indigo (`--indigo`, `#21134D`), the Figma heading and body color. Dark surfaces use white. Editors can override with every surface in `textColorSwatches`, the same palette as background colors, plus Brun (`--brown`) and Indigo. Article backgrounds include Indigo, with white text.
 4. Lys/Mörk tones (`navyLys`, `rustMork`, …) are chrome, text, and borders. They are not module swatches.
 5. A color change updates both `palette.ts` and the matching CSS variables.
 6. Do not add a color that is missing from the Figma Test-page palette without asking.
@@ -38,10 +38,11 @@ Read [src/lib/design/palette.ts](src/lib/design/palette.ts) before any color cha
 
 Call `themesFor(blockType)` for the swatch list.
 
-- **imageText:** fog (Varmgrå), ice, ink (Marinblå), blush, coral, sage
+- **imageText:** every background in the palette
 - **contact, contactUs:** white, sand, coral, sage, slate, steel, ink (Marinblå), fog (Varmgrå), mist, linen, ice, blush
 - **imagePair:** sand, coral, sage, slate, steel, ink (Marinblå), fog (Varmgrå), mist, linen, ice, blush
-- **text, article, sectionHeader:** white, fog, mist, linen, blush, sand
+- **text, sectionHeader:** white, fog, mist, linen, blush, sand
+- **article:** every surface, the same palette as rubrikfärg and textfärg, without Automatisk, including Indigo
 - **statement:** the light list plus ink, charcoal (Mörkgrå), rust
 - **pageHeader:** every module background, plus white and the footer color (charcoal). Logo and menu switch to the light marks on dark surfaces.
 - **contactForm:** no swatch. The address sits on the photo in white. The form card stays linen.
@@ -51,4 +52,4 @@ Existing stored themes that fall outside the list still render via `.cms-theme-*
 
 ## Surfaces
 
-`.cms-theme-{id}` sets `background` and `color` from the surface. White text (`--on-dark`) is for ink, steel, slate, charcoal, rust, and sage. Everything else uses `--on-light` (navy).
+`.cms-theme-{id}` sets `background` and `color` from the surface. White text (`--on-dark`) is for ink, steel, slate, charcoal, rust, sage, and indigo. Everything else uses `--on-light` (indigo, `#21134D`).
