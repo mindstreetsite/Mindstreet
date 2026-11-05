@@ -8,7 +8,7 @@ import { surfaceById } from "@/lib/design/palette";
 import { HeadingText, plainText, renderBreaks, renderInline, RichText } from "@/lib/cms/inline";
 import { articleParagraphs, quoteAfterIndex, resolveTheme } from "@/lib/cms/library";
 import { formatNewsDate } from "@/lib/cms/news-date";
-import type { CmsBlock, CmsCard, CmsLink, CmsPage } from "@/lib/cms/types";
+import type { CmsBlock, CmsCard, CmsLink, CmsPage, ShapeColor } from "@/lib/cms/types";
 import "./page-blocks.css";
 
 function themedProps(block: CmsBlock, className: string) {
@@ -212,7 +212,7 @@ function BlockView({
     return (
       <section {...blockSurfaceProps(block, `cms-media cms-theme-${theme}`)}>
         {(block.shape ?? theme === "mist") ? (
-          <ModuleShape align={side === "right" ? "left" : undefined} />
+          <ModuleShape align={side === "right" ? "left" : undefined} color={block.shapeColor} />
         ) : null}
         <div className={`cms-media-inner is-image-${side}`}>
           {side === "left" ? <ModulePhoto src={block.image} /> : null}
@@ -229,7 +229,7 @@ function BlockView({
     return (
       <section {...blockSurfaceProps(block, `cms-media cms-media-pair cms-theme-${theme}`)}>
         {(block.shape ?? theme === "mist") ? (
-          <ModuleShape align={side === "right" ? "left" : undefined} />
+          <ModuleShape align={side === "right" ? "left" : undefined} color={block.shapeColor} />
         ) : null}
         <div className={`cms-media-inner is-image-${side}`}>
           {side === "left" ? <PairPhotos block={block} /> : null}
@@ -295,7 +295,7 @@ function BlockView({
     const theme = resolveTheme(block);
     return (
       <section {...blockSurfaceProps(block, `cms-statement is-${align} cms-theme-${theme}`)}>
-        {(block.shape ?? theme === "mist") ? <ModuleShape /> : null}
+        {(block.shape ?? theme === "mist") ? <ModuleShape color={block.shapeColor} /> : null}
         <div className="cms-statement-inner">
           {block.body ? <RichText text={block.body} /> : null}
           {block.buttonLabel ? (
@@ -392,7 +392,9 @@ function BlockView({
     const theme = resolveTheme(block);
     return (
       <div {...blockSurfaceProps(block, `cms-contact-us cms-theme-${theme}`)}>
-        {(block.shape ?? true) ? <div className="cms-contact-us-shape" aria-hidden="true" /> : null}
+        {(block.shape ?? true) ? (
+          <div className={figureClass("cms-contact-us-shape", block.shapeColor)} aria-hidden="true" />
+        ) : null}
         <Header variant="bar" items={menu} />
         <div className="intro">
           <div>
@@ -469,29 +471,33 @@ function ThemedSurface({
   const theme = resolveTheme(block);
   return (
     <section {...blockSurfaceProps(block, `cms-surface cms-theme-${theme}`)}>
-      {(block.shape ?? theme === "mist") ? <ModuleShape variant={shape} /> : null}
+      {(block.shape ?? theme === "mist") ? <ModuleShape variant={shape} color={block.shapeColor} /> : null}
       <div className="cms-surface-inner">{children}</div>
     </section>
   );
 }
 
-function ModuleShape({ align, variant }: { align?: "left"; variant?: "text" }) {
+function figureClass(base: string, color?: ShapeColor) {
+  return `${base} is-figure-${color ?? "haze"}`;
+}
+
+function ModuleShape({
+  align,
+  variant,
+  color,
+}: {
+  align?: "left";
+  variant?: "text";
+  color?: ShapeColor;
+}) {
   const className = [
-    "cms-media-shape",
+    figureClass("cms-media-shape", color),
     align === "left" ? "is-left" : "",
     variant === "text" ? "is-text" : "",
   ]
     .filter(Boolean)
     .join(" ");
-  return (
-    <img
-      className={className}
-      src="/icons/about-shape.svg"
-      width={1440}
-      height={833}
-      alt=""
-    />
-  );
+  return <div className={className} aria-hidden="true" />;
 }
 
 function contactHref(value: string) {

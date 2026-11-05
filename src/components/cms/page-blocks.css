@@ -393,7 +393,6 @@ ul.cms-list-dash > li::before {
   top: 2%;
   width: 170%;
   height: 115%;
-  background: color-mix(in srgb, var(--linen) 30%, transparent);
   transform: rotate(-33.88deg);
   pointer-events: none;
   z-index: 0;
@@ -416,9 +415,29 @@ ul.cms-list-dash > li::before {
   position: absolute;
   left: 50%;
   top: 0;
+  width: 1440px;
+  height: 833px;
   max-width: none;
   transform: translateX(-50%);
   pointer-events: none;
+  -webkit-mask: url("/icons/about-shape.svg") center / 100% 100% no-repeat;
+  mask: url("/icons/about-shape.svg") center / 100% 100% no-repeat;
+}
+
+.cms-media-shape,
+.cms-contact-us-shape {
+  background: var(--figure);
+  mask-mode: alpha;
+}
+
+.cms-media-shape.is-figure-linen,
+.cms-contact-us-shape.is-figure-linen {
+  background: color-mix(in srgb, var(--linen) 30%, transparent);
+}
+
+.cms-media-shape.is-figure-veil,
+.cms-contact-us-shape.is-figure-veil {
+  background: color-mix(in srgb, var(--white) 10%, transparent);
 }
 
 .cms-media-shape.is-left {
@@ -427,7 +446,7 @@ ul.cms-list-dash > li::before {
 
 .cms-media-shape.is-text {
   top: -150px;
-  transform: translateX(calc(-50% + 210px));
+  transform: translateX(calc(-50% - 220px));
 }
 
 .cms-media-inner {

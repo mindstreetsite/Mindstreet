@@ -72,6 +72,7 @@ import {
   showsBodyColor,
   showsHeadingColor,
   swatchesFor,
+  figureSwatches,
   textColorSwatches,
   usesExpandedTheme,
 } from "@/lib/cms/library";
@@ -3095,6 +3096,11 @@ function BlockFieldsEditor({
   const linkPages = pages ?? [];
   const savedHrefListed = linkPages.some((page) => `/${page.slug}` === savedHref);
   const imageIssue = findCompletenessIssue(issues, "image", block.id);
+  const figureOn = usesExpandedTheme(block.type)
+    ? block.type === "contactUs"
+      ? (block.shape ?? true)
+      : (block.shape ?? resolveTheme(block) === "mist")
+    : false;
   const image2Issue = findCompletenessIssue(issues, "image2", block.id);
   if (block.type === "banner") {
     return (
@@ -3204,15 +3210,19 @@ function BlockFieldsEditor({
             usesExpandedTheme(block.type) ? (
               <FieldSwitch
                 label="Figur"
-                checked={
-                  block.type === "contactUs"
-                    ? (block.shape ?? true)
-                    : (block.shape ?? resolveTheme(block) === "mist")
-                }
+                checked={figureOn}
                 onChange={(shape) => onChange({ shape })}
               />
             ) : null
           }
+        />
+      ) : null}
+      {structure && figureOn ? (
+        <ColorSwatch
+          legend="Figurfärg"
+          value={block.shapeColor ?? "haze"}
+          options={figureSwatches}
+          onChange={(shapeColor) => onChange({ shapeColor })}
         />
       ) : null}
       {structure ? <TextColorFields block={block} onChange={onChange} /> : null}
@@ -4950,10 +4960,11 @@ function ColorSwatch<T extends string>({
               className={[
                 value === theme.id ? "is-active" : undefined,
                 theme.id === "auto" ? "is-auto" : undefined,
+                theme.id === "veil" ? "is-veil" : undefined,
               ]
                 .filter(Boolean)
                 .join(" ") || undefined}
-              style={theme.id === "auto" ? undefined : { background: theme.color }}
+              style={theme.id === "auto" || theme.id === "veil" ? undefined : { background: theme.color }}
               aria-pressed={value === theme.id}
               aria-label={theme.label}
               title={theme.label}

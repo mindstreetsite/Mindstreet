@@ -1914,6 +1914,12 @@ label.admin-inline-switch {
     );
 }
 
+.admin-swatches .admin-swatch-dots button.is-veil {
+  background:
+    linear-gradient(var(--paper), var(--paper)) padding-box,
+    repeating-conic-gradient(var(--border) 0% 25%, var(--paper) 0% 50%) 0 0 / 8px 8px;
+}
+
 .admin-save {
   display: flex;
   flex-wrap: wrap;

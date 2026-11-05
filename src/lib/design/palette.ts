@@ -128,7 +128,7 @@ const textColorById = new Map(textColorSwatches.map((item) => [item.id, item]));
 
 export const figureSwatches: { id: ShapeColor; label: string; color: string }[] = [
   { id: "haze", label: "Ljusblå", color: color.figure },
-  { id: "linen", label: "Linne", color: color.linen },
+  { id: "linen", label: "Linne 30 %", color: `color-mix(in srgb, ${color.linen} 30%, transparent)` },
   { id: "veil", label: "Vit 10 %", color: "rgba(255, 255, 255, 0.1)" },
 ];
 
