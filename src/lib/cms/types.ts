@@ -47,7 +47,7 @@ export type TextColor = "auto" | BlockTheme | "black";
 
 /**
  * Colors available for the decorative figure.
- * `linen` and `veil` stay as they are. `haze` is the light blue figure at 70%.
+ * `linen` and `veil` stay as they are. `haze` is the light blue figure at 50%.
  * Later colors are palette hues: dark surfaces at 50% with a 25% pair,
  * other surfaces at 30% with a 15% pair.
  */

@@ -382,6 +382,7 @@ function BlockView({
               <article key={item.id}>
                 {item.image ? <img className="cms-contact-card-photo" src={item.image} alt="" /> : null}
                 <ContactDetailList
+                  icons
                   name={item.contactName}
                   title={item.contactTitle}
                   email={item.contactEmail}

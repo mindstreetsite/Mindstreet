@@ -150,7 +150,7 @@ function lightFigure(id: ShapeColor, softId: ShapeColor, label: string, value: s
 }
 
 export const figureSwatches: { id: ShapeColor; label: string; color: string }[] = [
-  { id: "haze", label: "Ljusblå 70 %", color: figureMix(color.figure, 70) },
+  { id: "haze", label: "Ljusblå 50 %", color: figureMix(color.figure, 50) },
   { id: "linen", label: "Linne 30 %", color: `color-mix(in srgb, ${color.linen} 30%, transparent)` },
   { id: "veil", label: "Vit 10 %", color: "rgba(255, 255, 255, 0.1)" },
   ...darkFigure("navy", "navySoft", "Marinblå", color.navy),
@@ -169,7 +169,7 @@ export const figureSwatches: { id: ShapeColor; label: string; color: string }[] 
 const figureFillById = new Map(figureSwatches.map((item) => [item.id, item.color]));
 
 export function figureFill(id?: ShapeColor): string {
-  return figureFillById.get(id ?? "haze") ?? figureMix(color.figure, 70);
+  return figureFillById.get(id ?? "haze") ?? figureMix(color.figure, 50);
 }
 
 export function resolveTextColor(id?: TextColor): string | undefined {

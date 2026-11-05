@@ -437,7 +437,7 @@ ul.cms-list-dash > li::before {
 
 .cms-media-shape,
 .cms-contact-us-shape {
-  background: color-mix(in srgb, var(--figure) 70%, transparent);
+  background: color-mix(in srgb, var(--figure) 50%, transparent);
   mask-mode: alpha;
 }
 
@@ -458,7 +458,7 @@ ul.cms-list-dash > li::before {
 
 .cms-media-shape.is-text {
   left: calc(50% - 940px);
-  top: -322px;
+  top: -340px;
 }
 
 .cms-media-inner {
