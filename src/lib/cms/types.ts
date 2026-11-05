@@ -45,6 +45,9 @@ export type BlockTheme =
 
 export type TextColor = "auto" | BlockTheme;
 
+/** Colors available for the decorative figure. `veil` is white at 10% opacity. */
+export type ShapeColor = "haze" | "linen" | "veil";
+
 export type CmsCard = {
   id: string;
   heading: string;
@@ -90,6 +93,7 @@ export type CmsBlock = {
   headingColor?: TextColor;
   bodyColor?: TextColor;
   shape?: boolean;
+  shapeColor?: ShapeColor;
   parentSlug?: string;
   menu?: CmsLink[];
 };
@@ -102,6 +106,13 @@ export type CmsLink = {
 
 export type PageRole = "home" | "news";
 
+export type PageSeo = {
+  title?: string;
+  description?: string;
+  image?: string;
+  noindex?: boolean;
+};
+
 export type CmsPage = {
   slug: string;
   title: string;
@@ -111,4 +122,5 @@ export type CmsPage = {
   links: CmsLink[];
   blocks: CmsBlock[];
   pending?: CmsBlock[];
+  seo?: PageSeo;
 };

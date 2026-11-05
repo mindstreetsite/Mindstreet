@@ -65,6 +65,7 @@ import {
   quoteAfterIndex,
   quotePlacementValue,
   removeArticleNews,
+  editorTheme,
   resolvedMenu,
   resolveTheme,
   syncAllArticleNews,
@@ -74,6 +75,13 @@ import {
   textColorSwatches,
   usesExpandedTheme,
 } from "@/lib/cms/library";
+import {
+  compactSeo,
+  fallbackSeoDescription,
+  fallbackSeoTitle,
+  SEO_DESCRIPTION_MAX,
+  SEO_TITLE_MAX,
+} from "@/lib/cms/seo";
 import {
   absorbRemote,
   conflictNotice,
@@ -117,7 +125,7 @@ import {
   type PublishedImageUse,
   type TemplateArchiveEntry,
 } from "@/lib/cms/storage";
-import type { BlockType, CmsBlock, CmsCard, CmsLink, CmsPage, PageRole } from "@/lib/cms/types";
+import type { BlockTheme, BlockType, CmsBlock, CmsCard, CmsLink, CmsPage, PageRole, PageSeo } from "@/lib/cms/types";
 import "./ui.css";
 import "./admin.css";
 
@@ -151,6 +159,27 @@ function slugToOption(slug: string): string {
 
 function optionToSlug(value: string): string {
   return value === HOME_OPTION ? "" : value;
+}
+
+function withEditorArticleDates(blocks: CmsBlock[]): CmsBlock[] {
+  const today = todayDateInput();
+  let changed = false;
+  const next = blocks.map((block) => {
+    if (block.type !== "article" || block.publishedAt?.trim()) return block;
+    changed = true;
+    return { ...block, publishedAt: today };
+  });
+  return changed ? next : blocks;
+}
+
+function savedPageEditor(page: CmsPage) {
+  const role = page.role ?? "";
+  return {
+    title: page.title,
+    parentSlug: role === "home" ? "" : (page.parentSlug ?? ""),
+    role,
+    blocks: withEditorArticleDates(pageDraft(page).blocks),
+  };
 }
 
 function newsRoleError(role: "" | PageRole, pages: CmsPage[], ignoreSlug: string): string | null {
@@ -804,6 +833,14 @@ export default function AdminPage() {
   const editorTitle =
     titleInput.trim() ||
     (panel === "news" ? "Ny nyhet" : structurePage ? pageTitle(structurePage) : "Ny sida");
+  const pageEditsDirty = structurePage
+    ? !jsonEqual(savedPageEditor(structurePage), {
+        title: titleInput,
+        parentSlug: createRole === "home" ? "" : parentSlug,
+        role: createRole,
+        blocks: withEditorArticleDates(draftBlocks),
+      })
+    : false;
   const createIssues =
     (panel === "create" && structurePage) || (templatePage && !menuSelected)
       ? pageCompletenessIssues(
@@ -942,6 +979,19 @@ export default function AdminPage() {
     return true;
   }
 
+  function updatePageSeo(slug: string, patch: Partial<PageSeo>) {
+    persist((pages) =>
+      pages.map((page) => {
+        if (page.slug !== slug) return page;
+        const seo = compactSeo({ ...page.seo, ...patch });
+        if (seo) return { ...page, seo };
+        if (!page.seo) return page;
+        const { seo: _removed, ...rest } = page;
+        return rest;
+      }),
+    );
+  }
+
   function findTemplate(slug: string | null) {
     if (slug === null) return null;
     const choices = templateChoices(templatesRef.current);
@@ -1020,6 +1070,11 @@ export default function AdminPage() {
       return;
     }
     loadPageDraft(slug);
+  }
+
+  function revertPageEdits() {
+    if (structureSlug === null) return;
+    loadExistingPage(structureSlug);
   }
 
   function chooseEditPage(slug: string) {
@@ -1875,6 +1930,11 @@ export default function AdminPage() {
                       <LockedFooterNote />
                     </section>
 
+                    <PageSeoSection
+                      page={selected}
+                      onChange={(patch) => updatePageSeo(selected.slug, patch)}
+                    />
+
                     <section className="admin-danger" aria-label="Ta bort sida">
                       <h3>Ta bort sidan</h3>
                       <p>
@@ -2219,6 +2279,11 @@ export default function AdminPage() {
                                     ? "Spara sida"
                                     : "Skapa ny sida"}
                               </Button>
+                              {structurePage && pageEditsDirty ? (
+                                <Button type="button" variant="outline" onClick={revertPageEdits}>
+                                  Ångra
+                                </Button>
+                              ) : null}
                               {structurePage || lastSavedSlug !== null ? (
                                 <Button variant="outline" asChild>
                                   <a
@@ -2794,6 +2859,76 @@ function CompletenessBanner({
   );
 }
 
+function PageSeoSection({
+  page,
+  onChange,
+}: {
+  page: CmsPage;
+  onChange: (patch: Partial<PageSeo>) => void;
+}) {
+  const title = page.seo?.title ?? "";
+  const description = page.seo?.description ?? "";
+  return (
+    <section className="admin-seo" aria-label="Sök och delning">
+      <h3>Sök och delning</h3>
+      <p>
+        De här fälten styr hur sidan syns i Google och när någon delar länken. Tomma fält fylls
+        från sidans rubrik och text.
+      </p>
+      <AdminField
+        label="Titel"
+        htmlFor="page-seo-title"
+        hint={`${title.length} tecken. Ungefär ${SEO_TITLE_MAX} är lagom. Tomt fält använder sidnamnet.`}
+      >
+        <Input
+          id="page-seo-title"
+          value={title}
+          placeholder={fallbackSeoTitle(page)}
+          onChange={(event) => onChange({ title: event.target.value })}
+        />
+      </AdminField>
+      <AdminField
+        label="Beskrivning"
+        htmlFor="page-seo-description"
+        hint={`${description.length} tecken. Ungefär ${SEO_DESCRIPTION_MAX} är lagom. Tomt fält använder sidans text.`}
+      >
+        <Textarea
+          id="page-seo-description"
+          rows={4}
+          value={description}
+          placeholder={fallbackSeoDescription(page)}
+          onChange={(event) => onChange({ description: event.target.value })}
+        />
+      </AdminField>
+      <div className="admin-seo-image">
+        <p className="admin-seo-image-label">Delningsbild</p>
+        <p className="admin-field-hint">
+          Visas när någon delar länken. Tomt fält använder sidans första bild.
+        </p>
+        <ImageField
+          src={page.seo?.image}
+          chooseLabel="Välj delningsbild"
+          onChoose={(src) => onChange({ image: src })}
+          onClear={() => onChange({ image: "" })}
+        />
+      </div>
+      <label className="admin-check">
+        <input
+          type="checkbox"
+          checked={page.seo?.noindex === true}
+          onChange={(event) => onChange({ noindex: event.target.checked })}
+        />
+        <span>
+          <strong>Visa inte sidan i sökresultat</strong>
+          <small>
+            Använd för sidor som ska vara publicerade men inte hittas via Google.
+          </small>
+        </span>
+      </label>
+    </section>
+  );
+}
+
 function AdminField({
   label,
   issue,
@@ -3062,8 +3197,8 @@ function BlockFieldsEditor({
       {structure && fields.theme ? (
         <ColorSwatch
           legend="Bakgrundsfärg"
-          value={resolveTheme(block)}
-          options={swatchesFor(block.type, resolveTheme(block))}
+          value={editorTheme(block) as BlockTheme}
+          options={swatchesFor(block.type, block.theme)}
           onChange={(theme) => onChange({ theme })}
           aside={
             usesExpandedTheme(block.type) ? (

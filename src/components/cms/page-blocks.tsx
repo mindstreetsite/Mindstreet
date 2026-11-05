@@ -4,11 +4,23 @@ import { OfferingBlock } from "@/components/cms/offering-block";
 import { Header } from "@/components/header";
 import { SiteFooter } from "@/components/site-footer";
 import { blockSurfaceProps } from "@/lib/cms/block-style";
+import { surfaceById } from "@/lib/design/palette";
 import { HeadingText, plainText, renderBreaks, renderInline, RichText } from "@/lib/cms/inline";
 import { articleParagraphs, quoteAfterIndex, resolveTheme } from "@/lib/cms/library";
 import { formatNewsDate } from "@/lib/cms/news-date";
 import type { CmsBlock, CmsCard, CmsLink, CmsPage } from "@/lib/cms/types";
 import "./page-blocks.css";
+
+function themedProps(block: CmsBlock, className: string) {
+  const themed = block.theme ? `${className} cms-theme-${block.theme}` : className;
+  const props = blockSurfaceProps(block, themed);
+  const surface = block.theme ? surfaceById(block.theme) : undefined;
+  if (!surface) return props;
+  return {
+    ...props,
+    style: { ...props.style, background: surface.color, color: surface.on },
+  };
+}
 
 export function PageBlocks({
   page,
@@ -155,7 +167,7 @@ function BlockView({
 
   if (block.type === "textColumn") {
     return (
-      <section {...blockSurfaceProps(block, "cms-text-column")}>
+      <section {...themedProps(block, "cms-text-column")}>
         {(block.items ?? []).map((item) => {
           if (!item.heading.trim() && !item.body.trim()) return null;
           return (
@@ -301,7 +313,7 @@ function BlockView({
       <OfferingBlock
         heading={block.heading}
         items={block.items ?? []}
-        {...blockSurfaceProps(block, "offering")}
+        {...themedProps(block, "offering")}
       />
     );
   }
@@ -313,7 +325,7 @@ function BlockView({
         items={block.items ?? []}
         preview={preview}
         pageSize={block.type === "newsTwelve" ? 12 : 4}
-        {...blockSurfaceProps(block, "news")}
+        {...themedProps(block, "news")}
       />
     );
   }
@@ -325,7 +337,7 @@ function BlockView({
         items={articleItems}
         preview={preview}
         pageSize={12}
-        {...blockSurfaceProps(block, "news")}
+        {...themedProps(block, "news")}
       />
     );
   }
@@ -335,7 +347,7 @@ function BlockView({
     const cards = (
       <section
         {...(block.type === "contactCards"
-          ? blockSurfaceProps(block, "cms-contact-cards")
+          ? themedProps(block, "cms-contact-cards")
           : { className: "cms-contact-cards" })}
       >
         <div className="section-inner">
@@ -415,7 +427,7 @@ function BlockView({
   if (block.type === "expertise") {
     const items = block.items ?? [];
     return (
-      <section {...blockSurfaceProps(block, "cms-expertise")}>
+      <section {...themedProps(block, "cms-expertise")}>
         <div className="section-inner">
           {block.heading ? <HeadingText text={block.heading} as="h2" /> : null}
           <div className="cms-expertise-grid">

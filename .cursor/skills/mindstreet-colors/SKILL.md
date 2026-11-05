@@ -11,7 +11,7 @@ Read [src/lib/design/palette.ts](src/lib/design/palette.ts) before any color cha
 
 1. Use a semantic role or an allowed surface. Do not add a new hex in `admin.css` or `page-blocks.css`.
 2. Block backgrounds come only from `themesFor(type)` / `swatchesFor(type, current)`.
-3. Text on a surface uses that surface's `on` color by default (`headingColor` / `bodyColor` = `auto`). Light surfaces use Indigo (`--indigo`, `#21134D`), the Figma heading and body color. Dark surfaces use white. Editors can override with every surface in `textColorSwatches`, the same palette as background colors, plus Brun (`--brown`) and Indigo. Article backgrounds include Indigo, with white text.
+3. Text on a surface uses that surface's `on` color by default (`headingColor` / `bodyColor` = `auto`). Light surfaces use Indigo (`--indigo`, `#21134D`), the Figma heading and body color. Dark surfaces use white. Rubrikfärg, textfärg, and every block background use the same palette. Backgrounds omit Automatisk. Indigo is included, with white text.
 4. Lys/Mörk tones (`navyLys`, `rustMork`, …) are chrome, text, and borders. They are not module swatches.
 5. A color change updates both `palette.ts` and the matching CSS variables.
 6. Do not add a color that is missing from the Figma Test-page palette without asking.
@@ -38,15 +38,9 @@ Read [src/lib/design/palette.ts](src/lib/design/palette.ts) before any color cha
 
 Call `themesFor(blockType)` for the swatch list.
 
-- **imageText:** every background in the palette
-- **contact, contactUs:** white, sand, coral, sage, slate, steel, ink (Marinblå), fog (Varmgrå), mist, linen, ice, blush
-- **imagePair:** sand, coral, sage, slate, steel, ink (Marinblå), fog (Varmgrå), mist, linen, ice, blush
-- **text, sectionHeader:** white, fog, mist, linen, blush, sand
-- **article:** every surface, the same palette as rubrikfärg and textfärg, without Automatisk, including Indigo
-- **statement:** the light list plus ink, charcoal (Mörkgrå), rust
-- **pageHeader:** every module background, plus white and the footer color (charcoal). Logo and menu switch to the light marks on dark surfaces.
+- **imageText, contact, contactCards, contactUs, imagePair, text, textColumn, sectionHeader, article, statement, pageHeader, expertise, offering, news, newsTwelve, articleList:** the same palette as rubrikfärg and textfärg, without Automatisk. Page header logo and menu switch to the light marks on dark surfaces. Expertise keeps its peach background until a background is chosen.
 - **contactForm:** no swatch. The address sits on the photo in white. The form card stays linen.
-- **expertise, offering, news, newsTwelve, textColumn, hero, banner:** no background swatch. Heading and body colors still come from `textColorSwatches`. Expertise stays blush with rust heading until overridden. Hero and banner stay image plus dark shade.
+- **hero, banner, image:** no background swatch. The photo is the background. Heading and body colors still come from `textColorSwatches` where the block has text.
 
 Existing stored themes that fall outside the list still render via `.cms-theme-*`. `swatchesFor(type, current)` keeps the current value visible.
 

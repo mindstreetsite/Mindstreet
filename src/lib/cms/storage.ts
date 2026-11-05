@@ -1,6 +1,6 @@
 import { defaultMenu, isArticlePage, isBuiltinMenuTemplate } from "@/lib/cms/library";
 import { seedPages } from "@/lib/cms/seed";
-import type { CmsBlock, CmsLink, CmsPage, PageRole } from "@/lib/cms/types";
+import type { CmsBlock, CmsLink, CmsPage, PageRole, PageSeo } from "@/lib/cms/types";
 
 export type PageArchiveEntry = {
   id: string;
@@ -88,7 +88,9 @@ export function publishedImageUses(pages: CmsPage[], url: string): PublishedImag
   const uses: PublishedImageUse[] = [];
   for (const page of pages) {
     if (!page.published) continue;
-    if (!page.blocks.some((block) => blockShowsImage(block, url))) continue;
+    const inBlocks = page.blocks.some((block) => blockShowsImage(block, url));
+    const inSeo = page.seo?.image === url;
+    if (!inBlocks && !inSeo) continue;
     uses.push({ slug: page.slug, title: pageTitle(page) });
   }
   return uses;
@@ -110,13 +112,28 @@ export function blocksWithoutImage(blocks: CmsBlock[], url: string): CmsBlock[] 
 function pageWithoutImage(page: CmsPage, url: string): CmsPage {
   const blocks = blocksWithoutImage(page.blocks, url);
   const pending = page.pending ? blocksWithoutImage(page.pending, url) : undefined;
+  const seo = seoWithoutImage(page.seo, url);
   const blocksSame = blocks.every((block, index) => block === page.blocks[index]);
   const pendingSame =
     pending === undefined ||
     (page.pending !== undefined &&
       pending.every((block, index) => block === page.pending![index]));
-  if (blocksSame && pendingSame) return page;
-  return pending === undefined ? { ...page, blocks } : { ...page, blocks, pending };
+  const seoSame = seo === page.seo;
+  if (blocksSame && pendingSame && seoSame) return page;
+  const next: CmsPage = { ...page, blocks };
+  if (pending === undefined) delete next.pending;
+  else next.pending = pending;
+  if (seo) next.seo = seo;
+  else delete next.seo;
+  return next;
+}
+
+function seoWithoutImage(seo: PageSeo | undefined, url: string): PageSeo | undefined {
+  if (!seo || seo.image !== url) return seo;
+  const next: PageSeo = { ...seo };
+  delete next.image;
+  if (!next.title && !next.description && !next.noindex) return undefined;
+  return next;
 }
 
 export function withoutImage(state: CmsState, url: string): { state: CmsState; changed: boolean } {
@@ -736,6 +753,7 @@ export function hydratePage(value: unknown): CmsPage | null {
   const parentFromSlug = slug.includes("/") ? slug.slice(0, slug.lastIndexOf("/")) : undefined;
 
   const pending = Array.isArray(page.pending) ? hydrateBlocks(page.pending) : undefined;
+  const seo = hydrateSeo(page.seo);
 
   return {
     slug,
@@ -747,7 +765,21 @@ export function hydratePage(value: unknown): CmsPage | null {
     links: Array.isArray(page.links) ? page.links.filter(isCmsLink) : [],
     blocks: hydrateBlocks(page.blocks),
     pending,
+    ...(seo ? { seo } : {}),
   };
+}
+
+function hydrateSeo(value: unknown): PageSeo | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const raw = value as Partial<PageSeo>;
+  const seo: PageSeo = {};
+  if (typeof raw.title === "string" && raw.title.trim()) seo.title = raw.title.trim();
+  if (typeof raw.description === "string" && raw.description.trim()) {
+    seo.description = raw.description.trim();
+  }
+  if (typeof raw.image === "string" && raw.image.trim()) seo.image = raw.image.trim();
+  if (raw.noindex === true) seo.noindex = true;
+  return seo.title || seo.description || seo.image || seo.noindex ? seo : undefined;
 }
 
 function hydrateBlocks(value: unknown): CmsBlock[] {

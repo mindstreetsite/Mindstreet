@@ -4,6 +4,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { readCmsState } from "@/lib/cms/blob-store";
 import { articleNewsCards, resolvedMenu } from "@/lib/cms/library";
 import { newsDateForSlug } from "@/lib/cms/news-date";
+import { articleJsonLd, jsonLdHtml } from "@/lib/cms/seo";
 import { getPublishedPage } from "@/lib/cms/storage";
 import type { CmsLink } from "@/lib/cms/types";
 
@@ -67,12 +68,23 @@ export async function CmsRoute({ slug }: { slug: string }) {
   const page = getPublishedPage(slug, stored.state.pages);
   if (!page) return <MissingPage menu={menu} />;
 
+  const publishedAt = newsDateForSlug(page.slug, stored.state.pages);
+  const jsonLd = articleJsonLd(page, publishedAt);
+
   return (
-    <PageBlocks
-      page={page}
-      menu={menu}
-      publishedAt={newsDateForSlug(page.slug, stored.state.pages)}
-      articleItems={articleNewsCards(stored.state.pages)}
-    />
+    <>
+      {jsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLdHtml(jsonLd) }}
+        />
+      ) : null}
+      <PageBlocks
+        page={page}
+        menu={menu}
+        publishedAt={publishedAt}
+        articleItems={articleNewsCards(stored.state.pages)}
+      />
+    </>
   );
 }

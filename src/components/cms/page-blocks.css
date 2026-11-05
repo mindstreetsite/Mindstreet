@@ -48,7 +48,7 @@ ul.cms-list-dash > li::before {
 
 .cms-text-column h2 {
   margin: 0 0 18px;
-  color: var(--on-light);
+  color: inherit;
   font-family: inherit;
   font-size: 30px;
   font-style: normal;
@@ -58,7 +58,7 @@ ul.cms-list-dash > li::before {
 
 .cms-text-column p {
   margin: 0 0 28px;
-  color: var(--on-light);
+  color: inherit;
   font-family: inherit;
   font-size: 20px;
   font-style: normal;
@@ -336,18 +336,22 @@ ul.cms-list-dash > li::before {
 .cms-media.cms-theme-charcoal,
 .cms-media.cms-theme-rust,
 .cms-media.cms-theme-sage,
+.cms-media.cms-theme-indigo,
+.cms-contact-us.cms-theme-indigo,
 .about.cms-theme-slate,
 .about.cms-theme-ink,
 .about.cms-theme-steel,
 .about.cms-theme-charcoal,
 .about.cms-theme-rust,
 .about.cms-theme-sage,
+.about.cms-theme-indigo,
 .cms-statement.cms-theme-slate,
 .cms-statement.cms-theme-ink,
 .cms-statement.cms-theme-steel,
 .cms-statement.cms-theme-charcoal,
 .cms-statement.cms-theme-rust,
-.cms-statement.cms-theme-sage {
+.cms-statement.cms-theme-sage,
+.cms-statement.cms-theme-indigo {
   color: var(--on-dark);
 }
 
@@ -356,7 +360,8 @@ ul.cms-list-dash > li::before {
 .cms-media.cms-theme-steel .btn-dark,
 .cms-media.cms-theme-charcoal .btn-dark,
 .cms-media.cms-theme-rust .btn-dark,
-.cms-media.cms-theme-sage .btn-dark {
+.cms-media.cms-theme-sage .btn-dark,
+.cms-media.cms-theme-indigo .btn-dark {
   color: var(--on-dark);
   border-color: var(--on-dark);
 }
@@ -366,7 +371,8 @@ ul.cms-list-dash > li::before {
 .cms-media.cms-theme-steel .btn-dark:hover,
 .cms-media.cms-theme-charcoal .btn-dark:hover,
 .cms-media.cms-theme-rust .btn-dark:hover,
-.cms-media.cms-theme-sage .btn-dark:hover {
+.cms-media.cms-theme-sage .btn-dark:hover,
+.cms-media.cms-theme-indigo .btn-dark:hover {
   background: var(--on-dark);
   color: var(--on-light);
 }
@@ -420,8 +426,8 @@ ul.cms-list-dash > li::before {
 }
 
 .cms-media-shape.is-text {
-  top: -40px;
-  transform: translateX(calc(-50% + 88px));
+  top: -150px;
+  transform: translateX(calc(-50% + 210px));
 }
 
 .cms-media-inner {
@@ -647,7 +653,7 @@ ol.cms-contact-cards-text {
   max-width: var(--content);
   margin: 0 auto;
   padding: 72px var(--gutter) 24px;
-  color: var(--on-light);
+  color: inherit;
 }
 
 .cms-divider-inner h2 {
@@ -739,7 +745,8 @@ ol.cms-contact-cards-text {
 .cms-statement.cms-theme-steel .cms-statement-link,
 .cms-statement.cms-theme-charcoal .cms-statement-link,
 .cms-statement.cms-theme-rust .cms-statement-link,
-.cms-statement.cms-theme-sage .cms-statement-link {
+.cms-statement.cms-theme-sage .cms-statement-link,
+.cms-statement.cms-theme-indigo .cms-statement-link {
   color: var(--on-dark);
   border-color: var(--on-dark);
 }
@@ -749,7 +756,8 @@ ol.cms-contact-cards-text {
 .cms-statement.cms-theme-steel .cms-statement-link:hover,
 .cms-statement.cms-theme-charcoal .cms-statement-link:hover,
 .cms-statement.cms-theme-rust .cms-statement-link:hover,
-.cms-statement.cms-theme-sage .cms-statement-link:hover {
+.cms-statement.cms-theme-sage .cms-statement-link:hover,
+.cms-statement.cms-theme-indigo .cms-statement-link:hover {
   background: var(--on-dark);
   color: var(--on-light);
 }

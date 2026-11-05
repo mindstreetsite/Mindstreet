@@ -2,6 +2,7 @@ import { menuItems } from "@/content/home";
 import type { BlockTheme, BlockType, CmsBlock, CmsCard, CmsLink, CmsPage } from "@/lib/cms/types";
 
 export {
+  figureSwatches,
   swatchesFor,
   textColorSwatches,
   themesFor,
@@ -10,6 +11,7 @@ export {
 } from "@/lib/design/palette";
 
 export const SITE_HOST = "www.mindstreet.se";
+export const SITE_ORIGIN = `https://${SITE_HOST}`;
 
 const loremBody =
   "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.";
@@ -764,6 +766,7 @@ export function cloneTemplateBlocks(blocks: CmsBlock[]): CmsBlock[] {
     if (block.headingColor) next.headingColor = block.headingColor;
     if (block.bodyColor) next.bodyColor = block.bodyColor;
     if (block.shape !== undefined) next.shape = block.shape;
+    if (block.shapeColor) next.shapeColor = block.shapeColor;
     if (block.type === "contact") {
       next.contactName = "";
       next.contactTitle = "";
@@ -839,12 +842,30 @@ export function usesExpandedTheme(type: BlockType): boolean {
   return expandedThemeTypes.has(type);
 }
 
+const implicitThemeTypes = new Set<BlockType>([
+  "imageText",
+  "contact",
+  "imagePair",
+  "text",
+  "contactUs",
+  "article",
+  "sectionHeader",
+  "statement",
+  "pageHeader",
+]);
+
 export function resolveTheme(block: CmsBlock): BlockTheme {
   if (block.theme) return block.theme;
   if (block.type === "imageText" || block.type === "contact" || block.type === "imagePair") {
     return block.imageSide === "left" ? "mist" : "sand";
   }
   return "white";
+}
+
+/** Swatch to show as selected. Types without a painted default stay unselected until chosen. */
+export function editorTheme(block: CmsBlock): BlockTheme | "" {
+  if (block.theme || implicitThemeTypes.has(block.type)) return resolveTheme(block);
+  return "";
 }
 
 const none: Omit<BlockFields, "heading" | "body"> = {
@@ -912,7 +933,7 @@ export function fieldsFor(type: BlockType): BlockFields {
   }
 
   if (type === "contactCards") {
-    return { ...none, heading: "Rubrik", body: "Text", button: true, textColor: true };
+    return { ...none, heading: "Rubrik", body: "Text", button: true, theme: true, textColor: true };
   }
 
   if (type === "contactUs") {
@@ -924,7 +945,7 @@ export function fieldsFor(type: BlockType): BlockFields {
   }
 
   if (type === "expertise" || type === "offering" || isNewsBlock(type) || type === "articleList") {
-    return { ...none, heading: "Rubrik", body: null, textColor: true };
+    return { ...none, heading: "Rubrik", body: null, theme: true, textColor: true };
   }
 
   if (type === "statement") {
@@ -940,7 +961,7 @@ export function fieldsFor(type: BlockType): BlockFields {
   }
 
   if (type === "textColumn") {
-    return { ...none, heading: null, body: null, textColor: true };
+    return { ...none, heading: null, body: null, theme: true, textColor: true };
   }
 
   if (type === "image") {

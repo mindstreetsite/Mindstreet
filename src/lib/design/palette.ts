@@ -1,4 +1,4 @@
-import type { BlockTheme, BlockType, TextColor } from "@/lib/cms/types";
+import type { BlockTheme, BlockType, ShapeColor, TextColor } from "@/lib/cms/types";
 
 /** Primitive values from the Figma Test-page palette. Keep in sync with :root in globals.css. */
 export const color = {
@@ -18,6 +18,8 @@ export const color = {
   ice: "#C4DBE5",
   blush: "rgba(225, 188, 171, 0.4)",
   white: "#FFFFFF",
+  /** Figma figure fill. Not a module background. */
+  figure: "#E8F0F4",
   /** Figma heading and body ink. Also an article background, with white text. */
   indigo: "#21134D",
   navyLys: "#CBD9E3",
@@ -110,22 +112,6 @@ export const roles = {
   positive: color.sage,
 } as const;
 
-const moduleSurfaces: BlockTheme[] = [
-  "sand",
-  "coral",
-  "sage",
-  "slate",
-  "steel",
-  "ink",
-  "fog",
-  "mist",
-  "linen",
-  "ice",
-  "blush",
-];
-
-const contactSurfaces: BlockTheme[] = ["white", ...moduleSurfaces];
-
 export type TextSwatch = {
   id: TextColor;
   label: string;
@@ -140,34 +126,37 @@ export const textColorSwatches: TextSwatch[] = [
 
 const textColorById = new Map(textColorSwatches.map((item) => [item.id, item]));
 
+export const figureSwatches: { id: ShapeColor; label: string; color: string }[] = [
+  { id: "haze", label: "Ljusblå", color: color.figure },
+  { id: "linen", label: "Linne", color: color.linen },
+  { id: "veil", label: "Vit 10 %", color: "rgba(255, 255, 255, 0.1)" },
+];
+
 export function resolveTextColor(id?: TextColor): string | undefined {
   if (!id || id === "auto") return undefined;
   return textColorById.get(id)?.color;
 }
 
-/** Every background in the palette. */
-const imageTextSurfaces: BlockTheme[] = surfaces.map((item) => item.id);
-
-const textSurfaces: BlockTheme[] = ["white", "fog", "mist", "linen", "blush", "sand"];
-
-/** Same palette as rubrikfärg and textfärg, without Automatisk. */
-const articleSurfaces: BlockTheme[] = [...surfaces.map((item) => item.id), "indigo"];
-
-const statementSurfaces: BlockTheme[] = [...textSurfaces, "ink", "charcoal", "rust"];
-
-/** Background swatches, white, and the footer color (charcoal). */
-const pageHeaderSurfaces: BlockTheme[] = [...moduleSurfaces, "white", "charcoal", "rust"];
+/** Same colors as rubrikfärg and textfärg, without Automatisk. */
+const colorSurfaces: BlockTheme[] = [...surfaces.map((item) => item.id), "indigo"];
 
 const themesByType: Partial<Record<BlockType, BlockTheme[]>> = {
-  imageText: imageTextSurfaces,
-  contact: contactSurfaces,
-  imagePair: moduleSurfaces,
-  text: textSurfaces,
-  contactUs: contactSurfaces,
-  article: articleSurfaces,
-  sectionHeader: textSurfaces,
-  statement: statementSurfaces,
-  pageHeader: pageHeaderSurfaces,
+  imageText: colorSurfaces,
+  contact: colorSurfaces,
+  contactCards: colorSurfaces,
+  imagePair: colorSurfaces,
+  text: colorSurfaces,
+  textColumn: colorSurfaces,
+  contactUs: colorSurfaces,
+  article: colorSurfaces,
+  sectionHeader: colorSurfaces,
+  statement: colorSurfaces,
+  pageHeader: colorSurfaces,
+  expertise: colorSurfaces,
+  offering: colorSurfaces,
+  news: colorSurfaces,
+  newsTwelve: colorSurfaces,
+  articleList: colorSurfaces,
 };
 
 function surfacesFor(ids: BlockTheme[]): Surface[] {
