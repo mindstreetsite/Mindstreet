@@ -114,7 +114,6 @@ import {
   restoreArchivedPages,
   restoreTemplateChoice,
   retargetPageSlug,
-  rootPages,
   slugifyTitle,
   templateChoices,
   validateSlug,
@@ -823,8 +822,6 @@ export default function AdminPage() {
       ? (templateOptions.find((page) => page.slug === deleteSlug) ?? null)
       : null;
   const pendingRemoved = deleteSlug !== null ? pagesRemovedWith(deleteSlug, pages) : [];
-  const parents = rootPages(pages).filter((page) => page.slug);
-  const formParents = parents.filter((page) => page.slug !== structureSlug);
   const previewSlug =
     panel === "news"
       ? slugifyTitle(titleInput)
@@ -2328,25 +2325,6 @@ export default function AdminPage() {
                             <span>URL</span>
                             {pageAddress(previewSlug)}
                           </p>
-                          {panel === "news" ? null : (
-                            <label htmlFor="page-parent">
-                              Förälder
-                              <AdminSelect
-                                id="page-parent"
-                                wide
-                                value={createRole === "home" ? "" : parentSlug}
-                                disabled={createRole === "home"}
-                                onChange={setParentSlug}
-                                options={[
-                                  { value: "", label: "Ingen" },
-                                  ...formParents.map((page) => ({
-                                    value: page.slug,
-                                    label: pageLinkLabel(page),
-                                  })),
-                                ]}
-                              />
-                            </label>
-                          )}
                           {panel === "news" ? null : (
                             <RoleSwitches
                               role={createRole}
