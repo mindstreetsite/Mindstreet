@@ -1388,8 +1388,8 @@ export default function AdminPage() {
       pendingPurge.kind === "page"
         ? "Sidan är borttagen permanent."
         : "Mallen är borttagen permanent.";
-    if (await saveNow()) return;
     setPendingPurge(null);
+    if (await saveNow()) return;
     setNotice(notice);
   }
 

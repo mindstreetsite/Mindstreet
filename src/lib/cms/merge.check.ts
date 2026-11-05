@@ -6,6 +6,7 @@ import {
   hasConflicts,
   isChangeEmpty,
   jsonEqual,
+  parseCmsChange,
   type CmsChange,
 } from "./merge";
 import type { CmsState } from "./storage";
@@ -47,6 +48,7 @@ const colleagueChange = diffStates(base, colleague);
 
 assert(annaChange.pages.length === 1 && annaChange.pages[0].id === "kontakta-oss", "Anna diffs only contact");
 assert(colleagueChange.pages.length === 1 && colleagueChange.pages[0].id === "", "Colleague diffs only home");
+assert(parseCmsChange(colleagueChange)?.pages[0]?.id === "", "Homepage change is valid content");
 assert(isChangeEmpty(diffStates(base, base)), "Identical states send nothing");
 
 const afterAnna = applyChange(base, annaChange);

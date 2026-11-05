@@ -389,7 +389,7 @@ function parseItemChanges<T>(
   for (const row of value) {
     if (!row || typeof row !== "object") return null;
     const raw = row as { id?: unknown; next?: unknown; base?: unknown };
-    if (typeof raw.id !== "string" || !raw.id) return null;
+    if (typeof raw.id !== "string") return null;
     const next = raw.next == null ? null : hydrate(raw.next);
     if (raw.next != null && next === null) return null;
     const base = raw.base == null ? null : hydrate(raw.base);
