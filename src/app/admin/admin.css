@@ -778,6 +778,17 @@ span.admin-publish {
   margin-top: 8px;
 }
 
+.admin-archive-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.admin-archive-actions [data-slot="button"] {
+  margin-top: 0;
+}
+
 .admin-modal-backdrop {
   position: fixed;
   inset: 0;

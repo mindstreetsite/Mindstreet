@@ -32,6 +32,7 @@ export function AdminSelect({
   "aria-label": ariaLabel,
   "aria-describedby": ariaDescribedBy,
   onPointerDown,
+  wide = false,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -44,6 +45,7 @@ export function AdminSelect({
   "aria-label"?: string;
   "aria-describedby"?: string;
   onPointerDown?: PointerEventHandler<HTMLButtonElement>;
+  wide?: boolean;
 }) {
   return (
     <Select
@@ -54,7 +56,11 @@ export function AdminSelect({
       <SelectTrigger
         id={id}
         size={size}
-        className={className}
+        className={
+          wide
+            ? `${className} !h-auto min-h-[42px] !whitespace-normal [&_[data-slot=select-value]]:!line-clamp-none [&_[data-slot=select-value]]:!block [&_[data-slot=select-value]]:!whitespace-normal [&_[data-slot=select-value]]:text-left`
+            : className
+        }
         aria-invalid={ariaInvalid}
         aria-label={ariaLabel}
         aria-describedby={ariaDescribedBy}
@@ -62,21 +68,29 @@ export function AdminSelect({
       >
         <SelectValue />
       </SelectTrigger>
-      <SelectContent position="popper" align="start">
-        {groupedOptions(options)}
+      <SelectContent
+        position="popper"
+        align="start"
+        className={
+          wide
+            ? "w-max min-w-[var(--radix-select-trigger-width)] max-w-[min(42rem,calc(100vw-2rem))]"
+            : undefined
+        }
+      >
+        {groupedOptions(options, wide)}
       </SelectContent>
     </Select>
   );
 }
 
-function groupedOptions(options: AdminSelectOption[]) {
+function groupedOptions(options: AdminSelectOption[], wide: boolean) {
   const nodes: ReactNode[] = [];
   let index = 0;
 
   while (index < options.length) {
     const option = options[index];
     if (!option.group) {
-      nodes.push(selectItem(option));
+      nodes.push(selectItem(option, wide));
       index += 1;
       continue;
     }
@@ -84,7 +98,7 @@ function groupedOptions(options: AdminSelectOption[]) {
     const group = option.group;
     const items: ReactNode[] = [];
     while (index < options.length && options[index].group === group) {
-      items.push(selectItem(options[index]));
+      items.push(selectItem(options[index], wide));
       index += 1;
     }
     nodes.push(
@@ -98,10 +112,15 @@ function groupedOptions(options: AdminSelectOption[]) {
   return nodes;
 }
 
-function selectItem(option: AdminSelectOption) {
+function selectItem(option: AdminSelectOption, wide: boolean) {
   const value = option.value === "" ? EMPTY : option.value;
   return (
-    <SelectItem key={value} value={value} disabled={option.disabled}>
+    <SelectItem
+      key={value}
+      value={value}
+      disabled={option.disabled}
+      className={wide ? "whitespace-nowrap" : undefined}
+    >
       {option.label}
     </SelectItem>
   );

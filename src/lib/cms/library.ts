@@ -355,10 +355,6 @@ const newsStarters: { heading: string; image: string }[] = [
     heading: "Vi välkomnar ytterligare en stjärnkollega Anders Gustafsson till Mindstreet-teamet!",
     image: "/images/news-2.jpg",
   },
-  {
-    heading: "Tips på hur du lyckas med ett systembyte",
-    image: "/images/news-4.jpg",
-  },
 ];
 
 export function createNewsItem(heading = "Ny nyhet", image = ""): CmsCard {
@@ -473,6 +469,82 @@ function newsHref(value: string) {
   return value.trim().toLowerCase().replace(/^\/+/, "").replace(/\/+$/, "");
 }
 
+function newsHeadingKey(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function isStarterNewsHref(href: string) {
+  const target = newsHref(href);
+  return !target || target.startsWith("#");
+}
+
+function findNewsCardIndex(items: CmsCard[], card: CmsCard): number {
+  const target = newsHref(card.href);
+  const byHref = items.findIndex((item) => newsHref(item.href) === target);
+  if (byHref !== -1) return byHref;
+  const heading = newsHeadingKey(card.heading);
+  if (!heading) return -1;
+  return items.findIndex(
+    (item) => newsHeadingKey(item.heading) === heading && isStarterNewsHref(item.href),
+  );
+}
+
+function newsCardMatches(existing: CmsCard, card: CmsCard) {
+  return (
+    existing.heading === card.heading &&
+    (existing.image ?? "") === (card.image ?? "") &&
+    (existing.publishedAt ?? "") === (card.publishedAt ?? "") &&
+    existing.published === card.published &&
+    newsHref(existing.href) === newsHref(card.href)
+  );
+}
+
+function applyNewsCard(existing: CmsCard, card: CmsCard): CmsCard {
+  return {
+    ...existing,
+    heading: card.heading,
+    image: card.image ?? "",
+    publishedAt: card.publishedAt ?? "",
+    published: card.published,
+    href: card.href,
+  };
+}
+
+function dedupeNewsItems(items: CmsCard[]): CmsCard[] {
+  const byHref = new Map<string, number>();
+  const byHeading = new Map<string, number>();
+  const next: CmsCard[] = [];
+
+  for (const item of items) {
+    const href = newsHref(item.href);
+    const heading = newsHeadingKey(item.heading);
+
+    if (href) {
+      if (byHref.has(href)) continue;
+      const headingIndex = heading ? byHeading.get(heading) : undefined;
+      if (headingIndex !== undefined) {
+        const current = next[headingIndex];
+        if (isStarterNewsHref(current.href)) {
+          next[headingIndex] = item;
+          byHref.set(href, headingIndex);
+          continue;
+        }
+        continue;
+      }
+      if (heading) byHeading.set(heading, next.length);
+      byHref.set(href, next.length);
+      next.push(item);
+      continue;
+    }
+
+    if (heading && byHeading.has(heading)) continue;
+    if (heading) byHeading.set(heading, next.length);
+    next.push(item);
+  }
+
+  return next;
+}
+
 function rewriteNewsBlocks(
   blocks: CmsBlock[],
   rewrite: (block: CmsBlock) => CmsBlock,
@@ -509,30 +581,21 @@ export function upsertArticleNews(pages: CmsPage[], card: CmsCard): CmsPage[] {
   const next = pages.map((page) => {
     const updated = rewritePageNews(page, (block) => {
       const items = block.items ?? [];
-      const index = items.findIndex((item) => newsHref(item.href) === target);
-      if (index === -1) {
-        return { ...block, items: [{ ...card }, ...items] };
-      }
-      const existing = items[index];
+      const index = findNewsCardIndex(items, card);
+      const merged =
+        index === -1
+          ? [{ ...card }, ...items]
+          : newsCardMatches(items[index], card)
+            ? items
+            : items.map((item, itemIndex) => (itemIndex === index ? applyNewsCard(item, card) : item));
+      const deduped = dedupeNewsItems(merged);
       if (
-        existing.heading === card.heading &&
-        (existing.image ?? "") === (card.image ?? "") &&
-        (existing.publishedAt ?? "") === (card.publishedAt ?? "") &&
-        existing.published === card.published &&
-        newsHref(existing.href) === target
+        deduped.length === items.length &&
+        deduped.every((item, itemIndex) => item === items[itemIndex])
       ) {
         return block;
       }
-      const nextItems = items.slice();
-      nextItems[index] = {
-        ...existing,
-        heading: card.heading,
-        image: card.image ?? "",
-        publishedAt: card.publishedAt ?? "",
-        published: card.published,
-        href: card.href,
-      };
-      return { ...block, items: nextItems };
+      return { ...block, items: deduped };
     });
     if (updated === page) return page;
     any = true;
@@ -547,8 +610,29 @@ export function upsertArticleNewsForPage(pages: CmsPage[], page: CmsPage): CmsPa
   return upsertArticleNews(pages, newsCardFromArticle(article, page.slug, page.published));
 }
 
+function dedupeArticleNews(pages: CmsPage[]): CmsPage[] {
+  let any = false;
+  const next = pages.map((page) => {
+    const updated = rewritePageNews(page, (block) => {
+      const items = block.items ?? [];
+      const deduped = dedupeNewsItems(items);
+      if (
+        deduped.length === items.length &&
+        deduped.every((item, index) => item === items[index])
+      ) {
+        return block;
+      }
+      return { ...block, items: deduped };
+    });
+    if (updated === page) return page;
+    any = true;
+    return updated;
+  });
+  return any ? next : pages;
+}
+
 export function syncAllArticleNews(pages: CmsPage[]): CmsPage[] {
-  return pages.reduce((next, page) => upsertArticleNewsForPage(next, page), pages);
+  return dedupeArticleNews(pages.reduce((next, page) => upsertArticleNewsForPage(next, page), pages));
 }
 
 export function removeArticleNews(pages: CmsPage[], slugs: string[]): CmsPage[] {

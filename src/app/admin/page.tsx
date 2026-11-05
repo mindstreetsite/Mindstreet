@@ -93,10 +93,14 @@ import {
   hydrateState,
   orderedPages,
   pagesRemovedWith,
+  publishListPages,
   pageDraft,
   pageTitle,
   SEED_VERSION,
   publishedImageUses,
+  purgeArchivedPages,
+  purgeArchivedTemplate,
+  clearLocalSnapshot,
   readLocalSnapshot,
   restoreArchivedPages,
   restoreTemplateChoice,
@@ -128,6 +132,12 @@ async function loadLibraryImages() {
 }
 
 type Panel = "pages" | "create" | "news" | "components" | "images" | "archive";
+type PendingPurge = {
+  kind: "page" | "template";
+  id: string;
+  title: string;
+  childCount: number;
+};
 type EditorMode = "content" | "structure" | "full";
 
 const BLANK_TEMPLATE = "__blank__";
@@ -182,12 +192,12 @@ function bannerLinkOptions(pages: CmsPage[], savedHref: string) {
     ...(savedHref && !listed.has(savedHref) ? [{ value: savedHref, label: savedHref }] : []),
     ...sitePages.map((page) => ({
       value: `/${page.slug}`,
-      label: page.parentSlug ? `– ${pageTitle(page)}` : pageTitle(page),
+      label: pageLinkLabel(page),
       group: "Sidor",
     })),
     ...articles.map((page) => ({
       value: `/${page.slug}`,
-      label: articleLabel(page),
+      label: `${articleLabel(page)} (${pageAddress(page.slug)})`,
       group: "Nyheter",
     })),
   ];
@@ -472,6 +482,7 @@ export default function AdminPage() {
   const [deleteSlug, setDeleteSlug] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<"page" | "template" | null>(null);
   const [deleteInput, setDeleteInput] = useState("");
+  const [pendingPurge, setPendingPurge] = useState<PendingPurge | null>(null);
   const [phase, setPhase] = useState<"loading" | "locked" | "ready">("loading");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -661,20 +672,23 @@ export default function AdminPage() {
     const local = readLocalSnapshot();
     if (local) {
       if (data.empty) {
+        const archived = new Set(
+          local.archive.flatMap((entry) => [entry.slug, ...entry.pages.map((page) => page.slug)]),
+        );
         applyState(
           hydrateState({
             ...local,
+            pages: local.pages.filter((page) => !archived.has(page.slug)),
             seedVersion: SEED_VERSION,
           }),
           data.etag,
         );
       } else {
-        const pageSlugs = new Set(data.state.pages.map((page) => page.slug));
         const archiveIds = new Set(data.state.archive.map((entry) => entry.id));
         const templateSlugs = new Set(data.state.templates.map((template) => template.slug));
         const templateArchiveIds = new Set(data.state.templateArchive.map((entry) => entry.id));
         const merged: CmsState = {
-          pages: [...data.state.pages, ...local.pages.filter((page) => !pageSlugs.has(page.slug))],
+          pages: data.state.pages,
           archive: [...data.state.archive, ...local.archive.filter((entry) => !archiveIds.has(entry.id))],
           templates: [
             ...data.state.templates,
@@ -689,6 +703,7 @@ export default function AdminPage() {
         applyState(merged, data.etag);
       }
     }
+    clearLocalSnapshot();
 
     const current = snapshot();
     const filled = backfillTestArticleNews(current.pages) ?? current.pages;
@@ -738,7 +753,7 @@ export default function AdminPage() {
     structureSlug === null
       ? null
       : (pages.find((page) => page.slug === structureSlug) ?? null);
-  const listedPages = orderedPages(pages);
+  const listedPages = publishListPages(pages);
   const incompleteSlugs = useMemo(() => {
     const slugs = new Set<string>();
     for (const page of pages) {
@@ -1348,6 +1363,36 @@ export default function AdminPage() {
     setNotice(result.error ?? "Sidan är återställd.");
   }
 
+  async function confirmPurge() {
+    if (!pendingPurge) return;
+    if (pendingPurge.kind === "page") {
+      const next = purgeArchivedPages(pendingPurge.id, archiveRef.current);
+      if (!next) {
+        setPendingPurge(null);
+        setNotice("Arkivkopian finns inte.");
+        return;
+      }
+      archiveRef.current = next;
+      setArchive(next);
+    } else {
+      const next = purgeArchivedTemplate(pendingPurge.id, templateArchiveRef.current);
+      if (!next) {
+        setPendingPurge(null);
+        setNotice("Arkivkopian finns inte.");
+        return;
+      }
+      templateArchiveRef.current = next;
+      setTemplateArchive(next);
+    }
+    const notice =
+      pendingPurge.kind === "page"
+        ? "Sidan är borttagen permanent."
+        : "Mallen är borttagen permanent.";
+    if (await saveNow()) return;
+    setPendingPurge(null);
+    setNotice(notice);
+  }
+
   function findComponentSource(slug: string) {
     return templateChoices(templatesRef.current).find((page) => page.slug === slug) ?? null;
   }
@@ -1714,8 +1759,8 @@ export default function AdminPage() {
               <div className="admin-pages-layout">
                 <section aria-label="Befintliga sidor">
                   <ul className="admin-page-list">
-                    {listedPages.map((page) => (
-                      <li key={page.slug || "/"} className={page.parentSlug ? "is-child" : undefined}>
+                    {listedPages.map(({ page, child }) => (
+                      <li key={page.slug || "/"} className={child ? "is-child" : undefined}>
                         <button
                           type="button"
                           className={page.slug === selectedSlug ? "is-selected" : undefined}
@@ -1909,6 +1954,7 @@ export default function AdminPage() {
                             Sida
                             <AdminSelect
                               id="edit-page"
+                              wide
                               value={
                                 menuSelected
                                   ? slugToOption(MENU_TEMPLATE_SLUG)
@@ -1923,9 +1969,11 @@ export default function AdminPage() {
                               options={[
                                 { value: UNSELECTED_PAGE, label: "Välj sida", disabled: true },
                                 { value: slugToOption(MENU_TEMPLATE_SLUG), label: "Meny" },
-                                ...listedPages.map((page) => ({
+                                ...listedPages.map(({ page, child }) => ({
                                   value: slugToOption(page.slug),
-                                  label: page.parentSlug ? `– ${pageTitle(page)}` : pageTitle(page),
+                                  label: child
+                                    ? `– ${pageLinkLabel(page)}`
+                                    : pageLinkLabel(page),
                                 })),
                               ]}
                             />
@@ -2195,6 +2243,7 @@ export default function AdminPage() {
                               Förälder
                               <AdminSelect
                                 id="page-parent"
+                                wide
                                 value={createRole === "home" ? "" : parentSlug}
                                 disabled={createRole === "home"}
                                 onChange={setParentSlug}
@@ -2202,7 +2251,7 @@ export default function AdminPage() {
                                   { value: "", label: "Ingen" },
                                   ...formParents.map((page) => ({
                                     value: page.slug,
-                                    label: pageTitle(page),
+                                    label: pageLinkLabel(page),
                                   })),
                                 ]}
                               />
@@ -2434,7 +2483,7 @@ export default function AdminPage() {
               <div className="admin-archive-layout">
                 <section className="admin-archive" aria-label="Borttagna sidor">
                   <h3>Borttagna sidor</h3>
-                  <p>Kopian ligger kvar här tills sidan återställs.</p>
+                  <p>Kopian ligger kvar här tills sidan återställs eller tas bort permanent.</p>
                   {archive.length === 0 ? (
                     <p className="admin-empty">Inga borttagna sidor.</p>
                   ) : (
@@ -2452,13 +2501,29 @@ export default function AdminPage() {
                                 : ""}
                             </small>
                             <small>{formatDeletedAt(entry.deletedAt)}</small>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => restorePage(entry.id)}
-                            >
-                              Återställ
-                            </Button>
+                            <div className="admin-archive-actions">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => restorePage(entry.id)}
+                              >
+                                Återställ
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                onClick={() =>
+                                  setPendingPurge({
+                                    kind: "page",
+                                    id: entry.id,
+                                    title: pageTitle(page),
+                                    childCount: Math.max(0, entry.pages.length - 1),
+                                  })
+                                }
+                              >
+                                Ta bort permanent
+                              </Button>
+                            </div>
                           </li>
                         );
                       })}
@@ -2467,7 +2532,7 @@ export default function AdminPage() {
                 </section>
                 <section className="admin-archive" aria-label="Borttagna mallar">
                   <h3>Borttagna mallar</h3>
-                  <p>Kopian ligger kvar här tills mallen återställs.</p>
+                  <p>Kopian ligger kvar här tills mallen återställs eller tas bort permanent.</p>
                   {templateArchive.length === 0 ? (
                     <p className="admin-empty">Inga borttagna mallar.</p>
                   ) : (
@@ -2477,13 +2542,29 @@ export default function AdminPage() {
                           <span>{entry.template.title.trim() || entry.template.slug}</span>
                           <small>Mall</small>
                           <small>{formatDeletedAt(entry.deletedAt)}</small>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => restoreTemplate(entry.id)}
-                          >
-                            Återställ
-                          </Button>
+                          <div className="admin-archive-actions">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => restoreTemplate(entry.id)}
+                            >
+                              Återställ
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              onClick={() =>
+                                setPendingPurge({
+                                  kind: "template",
+                                  id: entry.id,
+                                  title: entry.template.title.trim() || entry.template.slug,
+                                  childCount: 0,
+                                })
+                              }
+                            >
+                              Ta bort permanent
+                            </Button>
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -2519,6 +2600,15 @@ export default function AdminPage() {
             closeDelete();
           }}
           onConfirm={confirmDeleteTemplate}
+        />
+      ) : null}
+      {pendingPurge ? (
+        <PurgeArchiveDialog
+          title={pendingPurge.title}
+          kind={pendingPurge.kind}
+          childCount={pendingPurge.childCount}
+          onCancel={() => setPendingPurge(null)}
+          onConfirm={() => void confirmPurge()}
         />
       ) : null}
       {catalogOpen ? (
@@ -2894,6 +2984,7 @@ function BlockFieldsEditor({
             </AdminField>
             <AdminField label="Länk" issue={hrefIssue}>
               <AdminSelect
+                wide
                 value={savedHref}
                 onChange={(buttonHref) => onChange({ buttonHref })}
                 options={bannerLinkOptions(linkPages, savedHref)}
@@ -2959,13 +3050,14 @@ function BlockFieldsEditor({
         <label>
           Förälder
           <AdminSelect
+            wide
             value={block.parentSlug !== undefined ? block.parentSlug : pageParentSlug}
             onChange={(parentSlug) => onChange({ parentSlug })}
             options={[
               { value: "", label: "Ingen" },
               ...parents.map((page) => ({
                 value: page.slug,
-                label: pageTitle(page),
+                label: pageLinkLabel(page),
               })),
             ]}
           />
@@ -3105,13 +3197,8 @@ function BlockFieldsEditor({
             <AdminSelect
               value={block.buttonHref ?? ""}
               onChange={(buttonHref) => onChange({ buttonHref })}
-              options={[
-                { value: "", label: "Ingen sida" },
-                ...(pages ?? []).map((page) => ({
-                  value: `/${page.slug}`,
-                  label: pageTitle(page),
-                })),
-              ]}
+              options={[{ value: "", label: "Ingen sida" }, ...pageHrefChoices(pages ?? [])]}
+              wide
             />
           </AdminField>
           <AdminField label="Knapp 2">
@@ -3124,13 +3211,8 @@ function BlockFieldsEditor({
             <AdminSelect
               value={block.button2Href ?? ""}
               onChange={(button2Href) => onChange({ button2Href })}
-              options={[
-                { value: "", label: "Ingen sida" },
-                ...(pages ?? []).map((page) => ({
-                  value: `/${page.slug}`,
-                  label: pageTitle(page),
-                })),
-              ]}
+              options={[{ value: "", label: "Ingen sida" }, ...pageHrefChoices(pages ?? [])]}
+              wide
             />
           </AdminField>
         </>
@@ -3211,13 +3293,8 @@ function BlockFieldsEditor({
             <AdminSelect
               value={block.buttonHref ?? ""}
               onChange={(buttonHref) => onChange({ buttonHref })}
-              options={[
-                { value: "", label: "Ingen sida" },
-                ...(pages ?? []).map((page) => ({
-                  value: `/${page.slug}`,
-                  label: pageTitle(page),
-                })),
-              ]}
+              options={[{ value: "", label: "Ingen sida" }, ...pageHrefChoices(pages ?? [])]}
+              wide
             />
           </AdminField>
         </>
@@ -3253,11 +3330,9 @@ function BlockFieldsEditor({
                   options={[
                     { value: "", label: "Ingen sida" },
                     ...(savedHref && !savedHrefListed ? [{ value: savedHref, label: savedHref }] : []),
-                    ...linkPages.map((page) => ({
-                      value: `/${page.slug}`,
-                      label: pageTitle(page),
-                    })),
+                    ...pageHrefChoices(linkPages),
                   ]}
+                  wide
                 />
               </AdminField>
             </>
@@ -3285,11 +3360,9 @@ function BlockFieldsEditor({
                 options={[
                   { value: "", label: "Ingen sida" },
                   ...(savedHref && !savedHrefListed ? [{ value: savedHref, label: savedHref }] : []),
-                  ...linkPages.map((page) => ({
-                    value: `/${page.slug}`,
-                    label: pageTitle(page),
-                  })),
+                  ...pageHrefChoices(linkPages),
                 ]}
+                wide
               />
             ) : (
               <Input
@@ -3356,6 +3429,17 @@ function BlockFieldsEditor({
 
 function pageAddress(slug: string) {
   return slug ? `${SITE_HOST}/${slug}` : SITE_HOST;
+}
+
+function pageLinkLabel(page: CmsPage): string {
+  return `${pageTitle(page)} (${pageAddress(page.slug)})`;
+}
+
+function pageHrefChoices(pages: CmsPage[]): { value: string; label: string }[] {
+  return orderedPages(pages).map((page) => ({
+    value: `/${page.slug}`,
+    label: pageLinkLabel(page),
+  }));
 }
 
 function addressMatches(input: string, address: string) {
@@ -3459,6 +3543,70 @@ function DeletePageDialog({
           </Button>
         </div>
       </form>
+    </div>
+  );
+}
+
+function PurgeArchiveDialog({
+  title,
+  kind,
+  childCount,
+  onCancel,
+  onConfirm,
+}: {
+  title: string;
+  kind: "page" | "template";
+  childCount: number;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const cancelRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    cancelRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") onCancel();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel]);
+
+  const subject =
+    kind === "template"
+      ? "Mallen"
+      : childCount > 0
+        ? `Sidan och ${childCount} ${childCount === 1 ? "undersida" : "undersidor"}`
+        : "Sidan";
+
+  return (
+    <div
+      className="admin-modal-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onCancel();
+      }}
+    >
+      <div
+        className="admin-modal"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="purge-archive-title"
+      >
+        <h2 id="purge-archive-title">Ta bort permanent?</h2>
+        <p>
+          Är du säker? <strong>{title}</strong> tas bort för gott. {subject} kan inte återställas.
+        </p>
+        <div className="admin-modal-actions">
+          <Button ref={cancelRef} type="button" variant="outline" onClick={onCancel}>
+            Avbryt
+          </Button>
+          <Button type="button" variant="destructive" onClick={onConfirm}>
+            Ta bort
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -4147,13 +4295,8 @@ function ExpertiseCards({
                 <AdminSelect
                   value={item.href}
                   onChange={(href) => patch(item.id, { href })}
-                  options={[
-                    { value: "", label: "Ingen sida" },
-                    ...pages.map((page) => ({
-                      value: `/${page.slug}`,
-                      label: page.title,
-                    })),
-                  ]}
+                  options={[{ value: "", label: "Ingen sida" }, ...pageHrefChoices(pages)]}
+                  wide
                 />
               </AdminField>
             ) : null}
@@ -4183,15 +4326,13 @@ function PageChoice({
   return (
     <AdminField label="Länk">
       <AdminSelect
+        wide
         value={value}
         onChange={onChange}
         options={[
           { value: "", label: "Välj sida" },
           ...(value && !pageHrefs.has(value) ? [{ value, label: value }] : []),
-          ...pages.map((page) => ({
-            value: `/${page.slug}`,
-            label: page.parentSlug ? `– ${pageTitle(page)}` : pageTitle(page),
-          })),
+          ...pageHrefChoices(pages),
         ]}
       />
     </AdminField>
@@ -4550,13 +4691,8 @@ function OfferingRows({
                   <AdminSelect
                     value={item.href}
                     onChange={(href) => patch(item.id, { href })}
-                    options={[
-                      { value: "", label: "Ingen sida" },
-                      ...pages.map((page) => ({
-                        value: `/${page.slug}`,
-                        label: page.title,
-                      })),
-                    ]}
+                    options={[{ value: "", label: "Ingen sida" }, ...pageHrefChoices(pages)]}
+                    wide
                   />
                 </AdminField>
               </>

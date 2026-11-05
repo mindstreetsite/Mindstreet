@@ -209,6 +209,14 @@ p {
   padding: 44px 52px 0 var(--gutter);
 }
 
+.hero > .site-header {
+  left: 50%;
+  right: auto;
+  width: min(100%, var(--content));
+  transform: translateX(-50%);
+  padding-right: var(--gutter);
+}
+
 .site-header.is-bar {
   position: relative;
   background: var(--header-surface, var(--white));
@@ -240,8 +248,10 @@ p {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
+  align-self: center;
   gap: 48px;
-  padding: 0 52px 126px var(--gutter);
+  width: min(100%, var(--content));
+  padding: 0 var(--gutter) 126px;
 }
 
 .hero h1 {

@@ -1,4 +1,4 @@
-import { defaultMenu, isBuiltinMenuTemplate } from "@/lib/cms/library";
+import { defaultMenu, isArticlePage, isBuiltinMenuTemplate } from "@/lib/cms/library";
 import { seedPages } from "@/lib/cms/seed";
 import type { CmsBlock, CmsLink, CmsPage, PageRole } from "@/lib/cms/types";
 
@@ -42,6 +42,7 @@ const LOCAL_PAGES = "mindstreet-cms-pages";
 const LOCAL_ARCHIVE = "mindstreet-cms-page-archive";
 const LOCAL_TEMPLATES = "mindstreet-cms-templates";
 const LOCAL_TEMPLATE_ARCHIVE = "mindstreet-cms-template-archive";
+const LOCAL_SEED_VERSION = "mindstreet-cms-seed-version";
 export const SEED_VERSION = "expertomraden-v1";
 const RESERVED = new Set(["admin"]);
 const SEGMENT = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -146,6 +147,15 @@ export function withoutImage(state: CmsState, url: string): { state: CmsState; c
   };
 }
 
+function archivedPageSlugs(archive: PageArchiveEntry[]): Set<string> {
+  const slugs = new Set<string>();
+  for (const entry of archive) {
+    slugs.add(entry.slug);
+    for (const page of entry.pages) slugs.add(page.slug);
+  }
+  return slugs;
+}
+
 export function hydrateState(value: unknown): CmsState {
   if (!value || typeof value !== "object") return seedState();
   const raw = value as Partial<CmsState> & { seedVersion?: unknown };
@@ -169,7 +179,10 @@ export function hydrateState(value: unknown): CmsState {
       ? pages
       : (() => {
           const existing = new Set(pages.map((page) => page.slug));
-          const missing = seedPages.filter((page) => !existing.has(page.slug));
+          const archived = archivedPageSlugs(archive);
+          const missing = seedPages.filter(
+            (page) => !existing.has(page.slug) && !archived.has(page.slug),
+          );
           return missing.length ? [...missing, ...pages] : pages;
         })();
 
@@ -192,11 +205,20 @@ export function readLocalSnapshot(): CmsState | null {
       archive: readLocalJson(LOCAL_ARCHIVE) ?? [],
       templates: readLocalJson(LOCAL_TEMPLATES) ?? [],
       templateArchive: readLocalJson(LOCAL_TEMPLATE_ARCHIVE) ?? [],
-      seedVersion: window.localStorage.getItem("mindstreet-cms-seed-version"),
+      seedVersion: window.localStorage.getItem(LOCAL_SEED_VERSION),
     });
   } catch {
     return null;
   }
+}
+
+export function clearLocalSnapshot() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(LOCAL_PAGES);
+  window.localStorage.removeItem(LOCAL_ARCHIVE);
+  window.localStorage.removeItem(LOCAL_TEMPLATES);
+  window.localStorage.removeItem(LOCAL_TEMPLATE_ARCHIVE);
+  window.localStorage.removeItem(LOCAL_SEED_VERSION);
 }
 
 function readLocalJson(key: string): unknown {
@@ -321,6 +343,19 @@ export function restoreArchivedPages(
     slug: entry.slug,
     error: null,
   };
+}
+
+export function purgeArchivedPages(id: string, archive: PageArchiveEntry[]): PageArchiveEntry[] | null {
+  if (!archive.some((item) => item.id === id)) return null;
+  return archive.filter((item) => item.id !== id);
+}
+
+export function purgeArchivedTemplate(
+  id: string,
+  templateArchive: TemplateArchiveEntry[],
+): TemplateArchiveEntry[] | null {
+  if (!templateArchive.some((item) => item.id === id)) return null;
+  return templateArchive.filter((item) => item.id !== id);
 }
 
 export function templatesNotMatchingPages(templates: CmsTemplate[], pages: CmsPage[]): CmsTemplate[] {
@@ -595,6 +630,101 @@ export function orderedPages(pages: CmsPage[]): CmsPage[] {
   }
 
   return result;
+}
+
+export type PublishListItem = {
+  page: CmsPage;
+  child: boolean;
+};
+
+function articlePublishedAt(page: CmsPage): string {
+  return page.blocks.find((block) => block.type === "article")?.publishedAt?.trim() ?? "";
+}
+
+function articleSortLabel(page: CmsPage): string {
+  const heading = page.blocks.find((block) => block.type === "article")?.heading.trim() ?? "";
+  return heading || pageTitle(page);
+}
+
+function comparePublishArticles(a: CmsPage, b: CmsPage): number {
+  const left = articlePublishedAt(a);
+  const right = articlePublishedAt(b);
+  if (left && right && left !== right) return right.localeCompare(left);
+  if (left && !right) return -1;
+  if (!left && right) return 1;
+  return articleSortLabel(a).localeCompare(articleSortLabel(b), "sv");
+}
+
+export function publishListPages(pages: CmsPage[]): PublishListItem[] {
+  const tree = orderedPages(pages);
+  const home = tree.find((page) => page.role === "home");
+  const news = tree.find((page) => page.role === "news");
+  const nestArticles = Boolean(news);
+  const articles = nestArticles
+    ? tree
+        .filter(
+          (page) => page.role !== "home" && page.role !== "news" && isArticlePage(page),
+        )
+        .sort(comparePublishArticles)
+    : [];
+  const articleSlugs = new Set(articles.map((page) => page.slug));
+
+  const children = new Map<string, CmsPage[]>();
+  const roots: CmsPage[] = [];
+  for (const page of pages) {
+    if (page.parentSlug) {
+      const list = children.get(page.parentSlug) ?? [];
+      list.push(page);
+      children.set(page.parentSlug, list);
+    } else {
+      roots.push(page);
+    }
+  }
+
+  const items: PublishListItem[] = [];
+  const placed = new Set<string>();
+
+  function skipNode(page: CmsPage): boolean {
+    return (news !== undefined && page.slug === news.slug) || articleSlugs.has(page.slug);
+  }
+
+  function walk(page: CmsPage, child: boolean) {
+    if (placed.has(page.slug) || skipNode(page)) return;
+    placed.add(page.slug);
+    items.push({ page, child: child || Boolean(page.parentSlug) });
+    for (const childPage of children.get(page.slug) ?? []) {
+      walk(childPage, true);
+    }
+  }
+
+  const knownSlugs = new Set(pages.map((page) => page.slug));
+
+  if (home) walk(home, false);
+  for (const root of roots) walk(root, false);
+  for (const page of pages) {
+    if (placed.has(page.slug) || skipNode(page)) continue;
+    if (page.parentSlug && knownSlugs.has(page.parentSlug)) continue;
+    walk(page, Boolean(page.parentSlug));
+  }
+
+  if (news && !placed.has(news.slug)) {
+    placed.add(news.slug);
+    items.push({ page: news, child: false });
+    for (const childPage of children.get(news.slug) ?? []) {
+      walk(childPage, true);
+    }
+  }
+
+  for (const article of articles) {
+    if (placed.has(article.slug)) continue;
+    placed.add(article.slug);
+    items.push({ page: article, child: true });
+    for (const childPage of children.get(article.slug) ?? []) {
+      walk(childPage, true);
+    }
+  }
+
+  return items;
 }
 
 export function hydratePage(value: unknown): CmsPage | null {
