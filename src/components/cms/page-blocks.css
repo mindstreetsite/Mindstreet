@@ -419,12 +419,13 @@ ul.cms-list-dash > li::before {
 }
 
 .cms-media-shape {
+  --swirl-scale: min(1, 100vw / 1440px);
   position: absolute;
-  /* Same anchor as the old 1440px figure, but the full swirl (viewBox 2296×1368) can run to the edges and past them. */
-  left: calc(50% - 720px);
-  top: -32px;
-  width: 2296px;
-  height: 1368px;
+  /* Same crop as the 1440px figure; below that width the box, anchors, and flip origin scale together. */
+  left: calc(50% - 720px * var(--swirl-scale));
+  top: calc(-32px * var(--swirl-scale));
+  width: calc(2296px * var(--swirl-scale));
+  height: calc(1368px * var(--swirl-scale));
   max-width: none;
   pointer-events: none;
   -webkit-mask: url("/icons/about-shape-full.svg") left top / 100% 100% no-repeat;
@@ -453,13 +454,13 @@ ul.cms-list-dash > li::before {
 
 .cms-media-shape.is-left {
   transform: scaleX(-1);
-  transform-origin: 720px center;
+  transform-origin: calc(720px * var(--swirl-scale)) center;
 }
 
 .cms-media-shape.is-text {
-  left: calc(50% - 940px);
+  left: calc(50% - 940px * var(--swirl-scale));
   /* The text block starts below the in-flow header. Pull the figure up so the visible curves meet that header. */
-  top: -520px;
+  top: calc(-520px * var(--swirl-scale));
 }
 
 .cms-media-inner {
@@ -1209,11 +1210,6 @@ ol.cms-contact-cards-text {
   .cms-pair-photos {
     min-height: 520px;
     max-width: 520px;
-  }
-
-  .cms-media-shape,
-  .cms-contact-us-shape {
-    display: none;
   }
 
   .cms-contact-form {

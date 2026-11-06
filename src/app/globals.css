@@ -1230,17 +1230,29 @@ p {
   }
 
   .site-footer {
-    flex-direction: column;
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 24px;
+    min-height: 0;
     padding: 64px var(--gutter);
   }
 
+  .site-footer > img:not(.footer-shape) {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
   .site-footer address {
+    grid-column: 1;
+    grid-row: 2;
     margin: 0;
   }
 
-  .linkedin {
-    align-self: flex-start;
+  .site-footer .linkedin {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
     margin-left: 0;
   }
 
