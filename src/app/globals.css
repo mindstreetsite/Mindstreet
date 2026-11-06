@@ -1036,6 +1036,7 @@ p {
   justify-content: flex-start;
   overflow: hidden;
   min-height: 319px;
+  margin-top: 64px;
   padding: 114px 3.68% 83px 3.47%;
   background: var(--footer);
   color: #fff;
