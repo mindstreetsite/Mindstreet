@@ -547,11 +547,6 @@ ul.cms-list-dash > li::before {
 }
 
 .cms-contact-lines a {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  max-width: 100%;
   color: inherit;
   overflow-wrap: anywhere;
 }
@@ -613,30 +608,6 @@ ol.cms-contact-cards-text {
 
 .cms-contact-card-grid .cms-contact-email {
   margin-top: 12px;
-}
-
-.cms-contact-icon {
-  display: block;
-  width: 22px;
-  height: 16px;
-  flex: 0 0 22px;
-  color: currentColor;
-}
-
-.cms-contact-card-grid .cms-contact-icon {
-  color: var(--steel);
-}
-
-.cms-contact-icon.is-phone {
-  width: 20px;
-  height: 20px;
-  flex-basis: 20px;
-}
-
-.cms-contact-icon.is-in {
-  width: 22px;
-  height: 18px;
-  flex-basis: 22px;
 }
 
 .cms-module-text {

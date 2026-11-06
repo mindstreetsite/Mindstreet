@@ -382,7 +382,6 @@ function BlockView({
               <article key={item.id}>
                 {item.image ? <img className="cms-contact-card-photo" src={item.image} alt="" /> : null}
                 <ContactDetailList
-                  icons
                   name={item.contactName}
                   title={item.contactTitle}
                   email={item.contactEmail}
@@ -525,14 +524,12 @@ function ContactDetailList({
   email = "",
   phone = "",
   linkedIn = "",
-  icons = false,
 }: {
   name?: string;
   title?: string;
   email?: string;
   phone?: string;
   linkedIn?: string;
-  icons?: boolean;
 }) {
   const lines = {
     name: name.trim(),
@@ -549,24 +546,17 @@ function ContactDetailList({
       {lines.title ? <li>{lines.title}</li> : null}
       {lines.email ? (
         <li className="cms-contact-email">
-          <a href={`mailto:${lines.email}`}>
-            {icons ? <MailIcon /> : null}
-            {lines.email}
-          </a>
+          <a href={`mailto:${lines.email}`}>{lines.email}</a>
         </li>
       ) : null}
       {lines.phone ? (
         <li>
-          <a href={`tel:${lines.phone.replace(/[^\d+]/g, "")}`}>
-            {icons ? <PhoneIcon /> : null}
-            {lines.phone}
-          </a>
+          <a href={`tel:${lines.phone.replace(/[^\d+]/g, "")}`}>{lines.phone}</a>
         </li>
       ) : null}
       {lines.linkedIn ? (
         <li>
           <a href={contactHref(lines.linkedIn)} target="_blank" rel="noreferrer">
-            {icons ? <LinkedInMark /> : null}
             LinkedIn
           </a>
         </li>
@@ -575,45 +565,10 @@ function ContactDetailList({
   );
 }
 
-function MailIcon() {
-  return (
-    <svg className="cms-contact-icon" viewBox="0 0 24 18" aria-hidden="true">
-      <path
-        fill="currentColor"
-        fillRule="evenodd"
-        d="M2.4 1.2h19.2c1 0 1.8.8 1.8 1.8v12c0 1-.8 1.8-1.8 1.8H2.4c-1 0-1.8-.8-1.8-1.8v-12c0-1 .8-1.8 1.8-1.8zm1 2.2 8.6 6.6 8.6-6.6-1.1-1.1L12 8.2 4.5 2.3 3.4 3.4z"
-      />
-    </svg>
-  );
-}
-
-function PhoneIcon() {
-  return (
-    <svg className="cms-contact-icon is-phone" viewBox="0 0 42 41" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M9.5 0Q11 0 13 4.5Q15 9 15 10.5Q15 12 12.5 14.5Q10 17 11 19Q12 21 15 24Q18 27 21.5 29Q25 31 27.5 28.5Q30 26 31.5 26Q33 26 37.5 28Q42 30 41 35.5Q40 41 35 41Q30 41 27 40Q24 39 19 36.5Q14 34 11 31Q8 28 6.5 26Q5 24 2.5 18Q0 12 0 7.5Q0 3 3.5 2Q7 1 7.5 0.5Q8 0 9.5 0Z"
-      />
-    </svg>
-  );
-}
-
-function LinkedInMark() {
-  return (
-    <svg className="cms-contact-icon is-in" viewBox="3.3 3.2 17.4 17.5" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452z"
-      />
-    </svg>
-  );
-}
-
 function ContactLines({ block }: { block: CmsBlock }) {
   if (block.type !== "contact") return null;
   return (
     <ContactDetailList
-      icons
       name={block.contactName}
       title={block.contactTitle}
       email={block.contactEmail}
