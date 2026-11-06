@@ -189,11 +189,12 @@ p {
 }
 
 .hero-shape {
+  --swirl-scale: min(1, 100vw / 1440px);
   position: absolute;
   left: 74%;
   top: 58%;
-  width: 1839.89px;
-  height: 1054.1px;
+  width: calc(1839.89px * var(--swirl-scale));
+  height: calc(1054.1px * var(--swirl-scale));
   max-width: none;
   transform: translate(-50%, -50%) rotate(-90deg) scale(1.2);
   pointer-events: none;
@@ -794,9 +795,12 @@ p {
 }
 
 .about-shape {
+  --swirl-scale: min(1, 100vw / 1440px);
   position: absolute;
   left: 50%;
   top: 0;
+  width: calc(1440px * var(--swirl-scale));
+  height: auto;
   max-width: none;
   transform: translateX(-50%);
   pointer-events: none;
@@ -1043,11 +1047,12 @@ p {
 }
 
 .footer-shape {
+  --swirl-scale: min(1, 100vw / 1440px);
   position: absolute;
   left: 31.3%;
-  top: -196px;
-  width: 918.63px;
-  height: 526.65px;
+  top: calc(-196px * var(--swirl-scale));
+  width: calc(918.63px * var(--swirl-scale));
+  height: calc(526.65px * var(--swirl-scale));
   transform: rotate(-33.88deg);
   pointer-events: none;
   z-index: 0;
@@ -1254,12 +1259,6 @@ p {
     grid-row: 1 / span 2;
     align-self: center;
     margin-left: 0;
-  }
-
-  .hero-shape,
-  .about-shape,
-  .site-footer .footer-shape {
-    display: none;
   }
 }
 
