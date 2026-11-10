@@ -871,6 +871,50 @@ ol.cms-contact-cards-text {
   line-height: 35px;
 }
 
+.cms-table-scroll {
+  margin: 0 0 28px;
+  overflow: hidden;
+  border: 1px solid var(--navy-lys);
+  border-radius: 12px;
+  background: var(--white);
+  color: var(--navy);
+}
+
+.cms-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  color: var(--navy);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: var(--weight-regular);
+  line-height: 1.45;
+}
+
+.cms-table th,
+.cms-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--navy-lys);
+  color: var(--navy);
+  font-weight: var(--weight-regular);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: break-word;
+}
+
+.cms-table th {
+  background: var(--mist);
+}
+
+.cms-table tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+.cms-table a {
+  color: var(--navy);
+}
+
 .cms-article-copy .cms-article-subhead {
   font-size: 30px;
 }
@@ -1330,6 +1374,10 @@ ol.cms-contact-cards-text {
   .cms-article-copy ol {
     font-size: 18px;
     line-height: 1.55;
+  }
+
+  .cms-table-scroll {
+    overflow-x: auto;
   }
 
   .cms-text-column {

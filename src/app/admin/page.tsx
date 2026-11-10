@@ -18,7 +18,14 @@ import {
   applyLineFormat,
   applyTextStyle,
   clearFormatting,
+  insertTable,
   inspectFormat,
+  joinRichParts,
+  splitRichParts,
+  tableColumnWidths,
+  type ParsedTable,
+  type RichPart,
+  type SelectionFormat,
   listMarkers,
   type LineFormat,
   type ListMarker,
@@ -3897,6 +3904,392 @@ function PageMiniature({
   );
 }
 
+function tableWidth(table: ParsedTable) {
+  return Math.max(table.headers.length, ...table.rows.map((row) => row.length), 1);
+}
+
+function fittedTable(table: ParsedTable): ParsedTable {
+  const width = tableWidth(table);
+  const fit = (row: string[]) => {
+    const next = row.slice(0, width);
+    while (next.length < width) next.push("");
+    return next;
+  };
+  return { headers: fit(table.headers), rows: table.rows.map(fit) };
+}
+
+function addTableColumn(table: ParsedTable): ParsedTable {
+  const current = fittedTable(table);
+  return {
+    headers: [...current.headers, ""],
+    rows: current.rows.map((row) => [...row, ""]),
+  };
+}
+
+function addTableRow(table: ParsedTable): ParsedTable {
+  const current = fittedTable(table);
+  return { headers: current.headers, rows: [...current.rows, current.headers.map(() => "")] };
+}
+
+function removeTableColumn(table: ParsedTable, index: number): ParsedTable {
+  const current = fittedTable(table);
+  if (current.headers.length <= 1) return current;
+  return {
+    headers: current.headers.filter((_, cell) => cell !== index),
+    rows: current.rows.map((row) => row.filter((_, cell) => cell !== index)),
+  };
+}
+
+function removeTableRow(table: ParsedTable, index: number): ParsedTable {
+  if (table.rows.length <= 1) return table;
+  return { ...table, rows: table.rows.filter((_, row) => row !== index) };
+}
+
+function FormatBar({
+  format,
+  onStyle,
+  onInline,
+  onLine,
+  onTable,
+  onClear,
+  onPointerDown,
+}: {
+  format: SelectionFormat;
+  onStyle: (style: TextStyle) => void;
+  onInline: (kind: "bold" | "italic" | "underline" | "link") => void;
+  onLine: (kind: LineFormat) => void;
+  onTable: () => void;
+  onClear: () => void;
+  onPointerDown: (event: { preventDefault: () => void }) => void;
+}) {
+  return (
+    <div className="admin-format-bar">
+      <AdminSelect
+        aria-label="Textstil"
+        value={format.style}
+        onPointerDown={onPointerDown}
+        onChange={(style) => onStyle(style as TextStyle)}
+        size="sm"
+        className="w-auto border-0 shadow-none bg-transparent"
+        options={[
+          { value: "normal", label: "Normal" },
+          { value: "heading", label: "Rubrik" },
+        ]}
+      />
+      <span className="admin-format-rule" aria-hidden="true" />
+      <button type="button" aria-label="Fetstil" title="Fetstil" aria-pressed={format.bold} onMouseDown={onPointerDown} onClick={() => onInline("bold")}>
+        B
+      </button>
+      <button type="button" className="admin-format-italic" aria-label="Kursiv" title="Kursiv" aria-pressed={format.italic} onMouseDown={onPointerDown} onClick={() => onInline("italic")}>
+        I
+      </button>
+      <button type="button" className="admin-format-underline" aria-label="Understrykning" title="Understrykning" aria-pressed={format.underline} onMouseDown={onPointerDown} onClick={() => onInline("underline")}>
+        U
+      </button>
+      <ListMarkerMenu
+        value={format.list && format.list !== "number" ? format.list : null}
+        onPointerDown={onPointerDown}
+        onSelect={onLine}
+      />
+      <button type="button" aria-label="Numrerad lista" title="Numrerad lista" aria-pressed={format.list === "number"} onMouseDown={onPointerDown} onClick={() => onLine("number")}>
+        <NumberListIcon />
+      </button>
+      <button type="button" aria-label="Hyperlänk" title="Hyperlänk" onMouseDown={onPointerDown} onClick={() => onInline("link")}>
+        <LinkIcon />
+      </button>
+      <button type="button" aria-label="Tabell" title="Tabell" onMouseDown={onPointerDown} onClick={onTable}>
+        <TableIcon />
+      </button>
+      <button type="button" aria-label="Ta bort formatering" title="Ta bort formatering" onMouseDown={onPointerDown} onClick={onClear}>
+        <span className="admin-format-clear" aria-hidden="true">
+          T<sub>x</sub>
+        </span>
+      </button>
+    </div>
+  );
+}
+
+function TableGrid({
+  table,
+  onChange,
+  onRemove,
+}: {
+  table: ParsedTable;
+  onChange: (table: ParsedTable) => void;
+  onRemove: () => void;
+}) {
+  const current = fittedTable(table);
+  const columns = current.headers.length;
+
+  function setHeader(index: number, value: string) {
+    const headers = [...current.headers];
+    headers[index] = value;
+    onChange({ ...current, headers });
+  }
+
+  function setCell(rowIndex: number, index: number, value: string) {
+    onChange({
+      ...current,
+      rows: current.rows.map((row, indexInRows) => {
+        if (indexInRows !== rowIndex) return row;
+        const next = [...row];
+        next[index] = value;
+        return next;
+      }),
+    });
+  }
+
+  return (
+    <div className="admin-table">
+      <table className="admin-table-grid">
+        <colgroup>
+          {tableColumnWidths(columns).map((width, index) => (
+            <col key={index} style={{ width }} />
+          ))}
+        </colgroup>
+        <thead>
+          <tr>
+            {current.headers.map((cell, index) => (
+              <th key={index} scope="col">
+                <div className="admin-table-cell">
+                  <input
+                    aria-label={`Rubrik ${index + 1}`}
+                    value={cell}
+                    placeholder="Rubrik"
+                    onChange={(event) => setHeader(index, event.target.value)}
+                  />
+                  {columns > 1 ? (
+                    <button type="button" className="admin-table-remove" aria-label={`Ta bort kolumn ${index + 1}`} onClick={() => onChange(removeTableColumn(current, index))}>
+                      ×
+                    </button>
+                  ) : null}
+                </div>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {current.rows.map((row, rowIndex) => (
+            <tr key={rowIndex}>
+              {row.map((cell, index) => (
+                <td key={index}>
+                  <div className="admin-table-cell">
+                    <input
+                      aria-label={`Rad ${rowIndex + 1}, kolumn ${index + 1}`}
+                      value={cell}
+                      placeholder="Text"
+                      onChange={(event) => setCell(rowIndex, index, event.target.value)}
+                    />
+                    {index === row.length - 1 && current.rows.length > 1 ? (
+                      <button type="button" className="admin-table-remove" aria-label={`Ta bort rad ${rowIndex + 1}`} onClick={() => onChange(removeTableRow(current, rowIndex))}>
+                        ×
+                      </button>
+                    ) : null}
+                  </div>
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="admin-table-actions">
+        <button type="button" onClick={() => onChange(addTableRow(current))}>
+          Lägg till rad
+        </button>
+        <button type="button" onClick={() => onChange(addTableColumn(current))}>
+          Lägg till kolumn
+        </button>
+        <button type="button" className="is-danger" onClick={onRemove}>
+          Ta bort tabell
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function RichComposer({
+  value,
+  rows,
+  onChange,
+}: {
+  value: string;
+  rows: number;
+  onChange: (value: string) => void;
+}) {
+  const parts = splitRichParts(value);
+  const firstIsText = parts[0]?.kind === "text";
+  const lastIsText = parts[parts.length - 1]?.kind === "text";
+  const head = firstIsText && parts[0].kind === "text" ? parts[0].text : "";
+  const tail = lastIsText && parts[parts.length - 1].kind === "text" ? parts[parts.length - 1].text : "";
+  const middle = parts.slice(firstIsText ? 1 : 0, lastIsText ? -1 : undefined);
+  const headRef = useRef<HTMLTextAreaElement>(null);
+  const tailRef = useRef<HTMLTextAreaElement>(null);
+  const middleRefs = useRef<Array<HTMLTextAreaElement | null>>([]);
+  const [slot, setSlot] = useState<"head" | "tail" | number>("head");
+  const [selection, setSelection] = useState({ start: 0, end: 0 });
+
+  function textAt(current: "head" | "tail" | number) {
+    if (current === "head") return head;
+    if (current === "tail") return tail;
+    const part = middle[current];
+    return part?.kind === "text" ? part.text : "";
+  }
+
+  function fieldAt(current: "head" | "tail" | number) {
+    if (current === "head") return headRef.current;
+    if (current === "tail") return tailRef.current;
+    return middleRefs.current[current] ?? null;
+  }
+
+  const format = inspectFormat(textAt(slot), selection.start, selection.end);
+
+  function replaceMiddle(index: number, pieces: RichPart[]) {
+    const at = (firstIsText ? 1 : 0) + index;
+    onChange(joinRichParts([...parts.slice(0, at), ...pieces, ...parts.slice(at + 1)]));
+  }
+
+  function write(current: "head" | "tail" | number, pieces: RichPart[]) {
+    if (current === "head") {
+      const rest = firstIsText ? parts.slice(1) : parts;
+      onChange(joinRichParts([...pieces, ...rest]));
+      return;
+    }
+    if (current === "tail") {
+      const rest = lastIsText ? parts.slice(0, -1) : parts;
+      onChange(joinRichParts([...rest, ...pieces]));
+      return;
+    }
+    replaceMiddle(current, pieces);
+  }
+
+  function writeText(current: "head" | "tail" | number, text: string) {
+    write(current, text.length > 0 ? [{ kind: "text", text }] : []);
+  }
+
+  function remember(current: "head" | "tail" | number) {
+    const field = fieldAt(current);
+    if (!field) return;
+    setSlot(current);
+    setSelection({ start: field.selectionStart, end: field.selectionEnd });
+  }
+
+  function keepSelection(event: { preventDefault: () => void }) {
+    remember(slot);
+    event.preventDefault();
+  }
+
+  function applyToSlot(next: { value: string; start: number; end: number }) {
+    const current = slot;
+    writeText(current, next.value);
+    setSelection({ start: next.start, end: next.end });
+    requestAnimationFrame(() => {
+      const field = fieldAt(current);
+      if (!field) return;
+      field.focus();
+      field.setSelectionRange(next.start, next.end);
+    });
+  }
+
+  function formatInline(kind: "bold" | "italic" | "underline" | "link") {
+    const field = fieldAt(slot);
+    const text = textAt(slot);
+    const start = field && document.activeElement === field ? field.selectionStart : selection.start;
+    const end = field && document.activeElement === field ? field.selectionEnd : selection.end;
+    const url = kind === "link" ? window.prompt("Klistra in länken", "https://") ?? "" : "";
+    if (kind === "link" && !url.trim()) return;
+    const next = applyInline(text, start, end, kind, url);
+    if (!next) {
+      window.alert("Länken behöver börja med https://, http://, /, #, mailto: eller tel:.");
+      return;
+    }
+    applyToSlot(next);
+  }
+
+  function formatLine(kind: LineFormat) {
+    const field = fieldAt(slot);
+    const text = textAt(slot);
+    const start = field && document.activeElement === field ? field.selectionStart : selection.start;
+    const end = field && document.activeElement === field ? field.selectionEnd : selection.end;
+    applyToSlot(applyLineFormat(text, start, end, kind));
+  }
+
+  function formatTable() {
+    const field = fieldAt(slot);
+    const text = textAt(slot);
+    const start = field?.selectionStart ?? text.length;
+    const end = field?.selectionEnd ?? start;
+    write(slot, splitRichParts(insertTable(text, start, end).value));
+  }
+
+  function textArea(
+    current: "head" | "tail" | number,
+    text: string,
+    fieldRows: number,
+    ref: (node: HTMLTextAreaElement | null) => void,
+  ) {
+    return (
+      <Textarea
+        ref={ref}
+        rows={fieldRows}
+        value={text}
+        onFocus={() => setSlot(current)}
+        onSelect={() => remember(current)}
+        onKeyUp={() => remember(current)}
+        onMouseUp={() => remember(current)}
+        onChange={(event) => writeText(current, event.target.value)}
+      />
+    );
+  }
+
+  return (
+    <>
+      <FormatBar
+        format={format}
+        onStyle={(style) => {
+          const field = fieldAt(slot);
+          const text = textAt(slot);
+          const start = field && document.activeElement === field ? field.selectionStart : selection.start;
+          const end = field && document.activeElement === field ? field.selectionEnd : selection.end;
+          applyToSlot(applyTextStyle(text, start, end, style));
+        }}
+        onInline={formatInline}
+        onLine={formatLine}
+        onTable={formatTable}
+        onClear={() => {
+          const field = fieldAt(slot);
+          const text = textAt(slot);
+          const start = field && document.activeElement === field ? field.selectionStart : selection.start;
+          const end = field && document.activeElement === field ? field.selectionEnd : selection.end;
+          applyToSlot(clearFormatting(text, start, end));
+        }}
+        onPointerDown={keepSelection}
+      />
+      {textArea("head", head, head.trim() ? rows : 3, (node) => {
+        headRef.current = node;
+      })}
+      {middle.map((part, index) =>
+        part.kind === "text" ? (
+          <div key={`text-${index}`}>
+            {textArea(index, part.text, 6, (node) => {
+              middleRefs.current[index] = node;
+            })}
+          </div>
+        ) : (
+          <TableGrid
+            key={`table-${index}`}
+            table={part.table}
+            onChange={(table) => replaceMiddle(index, [{ kind: "table", table }])}
+            onRemove={() => replaceMiddle(index, [])}
+          />
+        ),
+      )}
+      {textArea("tail", tail, tail.trim() ? rows : 3, (node) => {
+        tailRef.current = node;
+      })}
+    </>
+  );
+}
+
 function FormattedText({
   label,
   rows,
@@ -3919,6 +4312,7 @@ function FormattedText({
   const [selection, setSelection] = useState({ start: 0, end: 0 });
   const errorId = issue ? `${issue.id}-error` : undefined;
   const format = lines ? inspectFormat(value, selection.start, selection.end) : null;
+  const hasTable = lines && splitRichParts(value).some((part) => part.kind === "table");
 
   function rememberSelection() {
     const field = fieldRef.current;
@@ -3979,6 +4373,26 @@ function FormattedText({
   function clearSelected() {
     const picked = pickedSelection();
     replace(clearFormatting(value, picked.start, picked.end));
+  }
+
+  function formatTable() {
+    const picked = pickedSelection();
+    replace(insertTable(value, picked.start, picked.end));
+  }
+
+  if (hasTable) {
+    return (
+      <div id={issue?.id} className={issue ? "admin-format is-invalid" : "admin-format"}>
+        <span>{label}</span>
+        <RichComposer rows={rows} value={value} onChange={onChange} />
+        {hint ? <span className="admin-format-hint">{hint}</span> : null}
+        {issue ? (
+          <span className="admin-field-error" id={errorId}>
+            {issue.fieldMessage}
+          </span>
+        ) : null}
+      </div>
+    );
   }
 
   return (
@@ -4054,6 +4468,15 @@ function FormattedText({
             onClick={() => formatInline("link")}
           >
             <LinkIcon />
+          </button>
+          <button
+            type="button"
+            aria-label="Tabell"
+            title="Tabell"
+            onMouseDown={keepFieldSelection}
+            onClick={formatTable}
+          >
+            <TableIcon />
           </button>
           <button
             type="button"
@@ -4215,6 +4638,15 @@ function NumberListIcon() {
       <text x="1" y="15.3" fill="currentColor" fontSize="6.5" fontFamily="sans-serif">
         3
       </text>
+    </svg>
+  );
+}
+
+function TableIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+      <rect x="2.25" y="3" width="13.5" height="12" rx="1.2" fill="none" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M2.25 7.2h13.5M2.25 11.2h13.5M8.25 3v12" fill="none" stroke="currentColor" strokeWidth="1.4" />
     </svg>
   );
 }

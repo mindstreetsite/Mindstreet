@@ -104,10 +104,134 @@ function hasLineFormat(text: string) {
   return text.split("\n").some((line) => lineMarkerKind(line.trim()));
 }
 
+const delimiterCell = /^:?-+:?$/;
+
+function tableCells(line: string): string[] | null {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith("|") || !trimmed.endsWith("|") || trimmed.length < 2) return null;
+  return trimmed
+    .slice(1, -1)
+    .split("|")
+    .map((cell) => cell.trim());
+}
+
+function isDelimiterRow(cells: string[]) {
+  return cells.length > 0 && cells.every((cell) => delimiterCell.test(cell));
+}
+
+export type ParsedTable = {
+  headers: string[];
+  rows: string[][];
+};
+
+function fitTableRow(row: string[], width: number) {
+  const next = row.slice(0, width);
+  while (next.length < width) next.push("");
+  return next;
+}
+
+export function parseTable(text: string): ParsedTable | null {
+  const lines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length < 2) return null;
+  const parsed = lines.map(tableCells);
+  if (parsed.some((row) => row === null)) return null;
+  const cells = parsed as string[][];
+  if (cells[0].length === 0) return null;
+  const dashed = isDelimiterRow(cells[1]);
+  const body = cells.slice(dashed ? 2 : 1);
+  const width = Math.max(cells[0].length, ...body.map((row) => row.length), 1);
+  return { headers: fitTableRow(cells[0], width), rows: body.map((row) => fitTableRow(row, width)) };
+}
+
+export function tableColumnWidths(count: number): string[] {
+  if (count <= 1) return ["100%"];
+  if (count === 2) return ["30%", "70%"];
+  if (count === 3) return ["20%", "50%", "30%"];
+  const first = 18;
+  const share = (100 - first) / (count - 1);
+  return [`${first}%`, ...Array.from({ length: count - 1 }, () => `${share}%`)];
+}
+
+export function blankTable(): ParsedTable {
+  return { headers: ["", ""], rows: [["", ""]] };
+}
+
+export function serializeTable(table: ParsedTable): string {
+  const width = Math.max(table.headers.length, ...table.rows.map((row) => row.length), 1);
+  const line = (cells: string[]) => `| ${fitTableRow(cells, width).join(" | ")} |`;
+  const rule = `| ${Array.from({ length: width }, () => "---").join(" | ")} |`;
+  return [line(table.headers), rule, ...table.rows.map(line)].join("\n");
+}
+
+export type RichPart = { kind: "text"; text: string } | { kind: "table"; table: ParsedTable };
+
+export function splitRichParts(value: string): RichPart[] {
+  if (!value.trim()) return [{ kind: "text", text: value }];
+  const parts: RichPart[] = [];
+  const text: string[] = [];
+  const flush = () => {
+    if (text.length === 0) return;
+    parts.push({ kind: "text", text: text.join("\n\n") });
+    text.length = 0;
+  };
+  for (const chunk of value.split(/\n[ \t]*\n/)) {
+    const table = parseTable(chunk);
+    if (table) {
+      flush();
+      parts.push({ kind: "table", table });
+    } else {
+      text.push(chunk);
+    }
+  }
+  flush();
+  return parts.length > 0 ? parts : [{ kind: "text", text: "" }];
+}
+
+export function joinRichParts(parts: RichPart[]): string {
+  return parts
+    .filter((part) => part.kind === "table" || part.text.length > 0)
+    .map((part) => (part.kind === "text" ? part.text : serializeTable(part.table)))
+    .join("\n\n");
+}
+
+export function insertTable(
+  value: string,
+  start: number,
+  end: number,
+): { value: string; start: number; end: number } {
+  const from = Math.max(0, Math.min(start, value.length));
+  const to = Math.max(from, Math.min(Math.max(start, end), value.length));
+  const before = value.slice(0, from);
+  const after = value.slice(to);
+  let prefix = "";
+  if (before.length > 0 && !/\n[ \t]*\n[ \t]*$/.test(before)) {
+    prefix = /\n[ \t]*$/.test(before) ? "\n" : "\n\n";
+  }
+  let suffix = "";
+  if (after.length > 0 && !/^[ \t]*\n[ \t]*\n/.test(after)) {
+    suffix = /^[ \t]*\n/.test(after) ? "\n" : "\n\n";
+  }
+  const block = serializeTable(blankTable());
+  const cursor = from + prefix.length + block.length;
+  return {
+    value: before + prefix + block + suffix + after,
+    start: cursor,
+    end: cursor,
+  };
+}
+
 export function plainText(text: string): string {
   return text
     .split("\n")
-    .map((line) => unwrapInline(stripLineMarker(line)))
+    .map((line) => {
+      const cells = tableCells(line);
+      if (cells && isDelimiterRow(cells)) return "";
+      if (cells) return unwrapInline(cells.filter(Boolean).join(" "));
+      return unwrapInline(stripLineMarker(line));
+    })
     .filter(Boolean)
     .join(" ");
 }
@@ -127,6 +251,39 @@ function RichBlocks({
   className?: string;
   paragraphAs?: ElementType;
 }) {
+  const table = parseTable(text);
+  if (table) {
+    return (
+      <div className={classNames("cms-table-scroll", className)}>
+        <table className="cms-table">
+          <colgroup>
+            {tableColumnWidths(table.headers.length).map((width, index) => (
+              <col key={index} style={{ width }} />
+            ))}
+          </colgroup>
+          <thead>
+            <tr>
+              {table.headers.map((cell, index) => (
+                <th key={index} scope="col">
+                  {renderInline(cell)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {table.rows.map((row, rowIndex) => (
+              <tr key={rowIndex}>
+                {row.map((cell, index) => (
+                  <td key={index}>{renderInline(cell)}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
   const blocks: ReactNode[] = [];
   let paragraph: string[] = [];
   let list: { kind: ListKind; items: string[] } | null = null;

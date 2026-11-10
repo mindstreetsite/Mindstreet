@@ -515,6 +515,90 @@
   line-height: 1.4;
 }
 
+.admin-table {
+  margin-top: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--paper);
+}
+
+.admin-table-grid {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+.admin-table-grid th,
+.admin-table-grid td {
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.admin-table-grid th {
+  background: var(--canvas);
+}
+
+.admin-table-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-table-grid input {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--navy);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.admin-table-grid input::placeholder {
+  color: var(--text-muted);
+  text-align: left;
+}
+
+.admin-table-remove,
+.admin-table-actions button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.admin-table-remove {
+  flex: 0 0 auto;
+  min-width: 32px;
+  padding: 0;
+  color: var(--text-muted);
+}
+
+.admin-table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px;
+}
+
+.admin-table-actions .is-danger {
+  color: var(--danger);
+}
+
 .admin-image.is-invalid {
   outline: 1px solid var(--rust);
   outline-offset: 4px;

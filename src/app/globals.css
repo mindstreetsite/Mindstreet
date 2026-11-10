@@ -362,11 +362,11 @@ p {
 
 .hero-actions .btn:hover {
   background: transparent;
-  color: var(--footer);
+  color: #fff;
 }
 
 .hero-actions .btn:hover::before {
-  background: #fff;
+  background: rgb(255 255 255 / 10%);
 }
 
 .menu-layer {
