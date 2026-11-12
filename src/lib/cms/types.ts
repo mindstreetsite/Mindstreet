@@ -134,6 +134,19 @@ export type CmsLink = {
   children?: { label: string; href: string }[];
 };
 
+export type CmsFooterLink = {
+  label: string;
+  href: string;
+};
+
+export type CmsFooter = {
+  street: string;
+  postal: string;
+  phone: string;
+  email: string;
+  links: CmsFooterLink[];
+};
+
 export type PageRole = "home" | "news";
 
 export type PageSeo = {

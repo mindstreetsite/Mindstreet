@@ -1,5 +1,5 @@
-import { menuItems } from "@/content/home";
-import type { BlockTheme, BlockType, CmsBlock, CmsCard, CmsLink, CmsPage } from "@/lib/cms/types";
+import { footer, menuItems } from "@/content/home";
+import type { BlockTheme, BlockType, CmsBlock, CmsCard, CmsFooter, CmsLink, CmsPage } from "@/lib/cms/types";
 
 export {
   figureSwatches,
@@ -388,6 +388,7 @@ export function isArticlePage(page: CmsPage): boolean {
 export const NEWS_ARTICLE_TEMPLATE_SLUG = "__news-article__";
 export const NEWS_ARTICLE_QUOTE_TEMPLATE_SLUG = "__news-article-quote__";
 export const MENU_TEMPLATE_SLUG = "__menu__";
+export const FOOTER_PAGE_ID = "__footer__";
 
 export function isBuiltinNewsTemplate(slug: string): boolean {
   return slug === NEWS_ARTICLE_TEMPLATE_SLUG || slug === NEWS_ARTICLE_QUOTE_TEMPLATE_SLUG;
@@ -395,6 +396,40 @@ export function isBuiltinNewsTemplate(slug: string): boolean {
 
 export function isBuiltinMenuTemplate(slug: string): boolean {
   return slug === MENU_TEMPLATE_SLUG;
+}
+
+export function isFooterPage(slug: string): boolean {
+  return slug === FOOTER_PAGE_ID;
+}
+
+export function defaultFooter(): CmsFooter {
+  return {
+    street: footer.address[0],
+    postal: footer.address[1],
+    phone: footer.phone.label,
+    email: footer.email,
+    links: [{ label: "Mindstreet på LinkedIn", href: footer.linkedIn }],
+  };
+}
+
+export function resolvedFooter(value?: CmsFooter | null): CmsFooter {
+  if (!value) return defaultFooter();
+  return {
+    street: value.street,
+    postal: value.postal,
+    phone: value.phone,
+    email: value.email,
+    links: value.links.map((link) => ({ label: link.label, href: link.href })),
+  };
+}
+
+export function phoneHref(label: string): string {
+  const compact = label.replace(/[^\d+]/g, "");
+  if (!compact) return "";
+  if (compact.startsWith("+")) return `tel:${compact}`;
+  if (compact.startsWith("00")) return `tel:+${compact.slice(2)}`;
+  if (compact.startsWith("0")) return `tel:+46${compact.slice(1)}`;
+  return `tel:${compact}`;
 }
 
 export function defaultMenu(): CmsLink[] {

@@ -1,6 +1,6 @@
 import { defaultMenu, isArticlePage, isBuiltinMenuTemplate } from "@/lib/cms/library";
 import { seedPages } from "@/lib/cms/seed";
-import type { CmsBlock, CmsLink, CmsPage, PageRole, PageSeo } from "@/lib/cms/types";
+import type { CmsBlock, CmsFooter, CmsFooterLink, CmsLink, CmsPage, PageRole, PageSeo } from "@/lib/cms/types";
 
 export type PageArchiveEntry = {
   id: string;
@@ -53,6 +53,7 @@ export type CmsState = {
   templates: CmsTemplate[];
   templateArchive: TemplateArchiveEntry[];
   menu?: CmsLink[];
+  footer?: CmsFooter;
 };
 
 export function seedState(): CmsState {
@@ -159,7 +160,9 @@ export function withoutImage(state: CmsState, url: string): { state: CmsState; c
     templates.some((template, index) => template !== state.templates[index]) ||
     templateArchive.some((entry, index) => entry !== state.templateArchive[index]);
   return {
-    state: changed ? { pages, archive, templates, templateArchive, menu: state.menu } : state,
+    state: changed
+      ? { pages, archive, templates, templateArchive, menu: state.menu, footer: state.footer }
+      : state,
     changed,
   };
 }
@@ -209,6 +212,7 @@ export function hydrateState(value: unknown): CmsState {
     templates: templatesNotMatchingPages(templates, nextPages),
     templateArchive: templateArchive.filter((entry) => !entry.hiddenPage),
     menu: hydrateMenu(raw.menu, nextPages),
+    footer: hydrateFooter(raw.footer),
   };
 }
 
@@ -828,6 +832,27 @@ function savedMenu(pages: CmsPage[]): CmsLink[] | undefined {
     if ((block.menu ?? []).some((item) => item.label.trim())) return block.menu;
   }
   return undefined;
+}
+
+export function hydrateFooter(value: unknown): CmsFooter | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const raw = value as Partial<CmsFooter>;
+  const links = Array.isArray(raw.links)
+    ? raw.links.filter(
+        (item): item is CmsFooterLink =>
+          !!item &&
+          typeof item === "object" &&
+          typeof item.label === "string" &&
+          typeof item.href === "string",
+      )
+    : [];
+  return {
+    street: typeof raw.street === "string" ? raw.street : "",
+    postal: typeof raw.postal === "string" ? raw.postal : "",
+    phone: typeof raw.phone === "string" ? raw.phone : "",
+    email: typeof raw.email === "string" ? raw.email : "",
+    links,
+  };
 }
 
 function hydrateMenu(value: unknown, pages: CmsPage[]): CmsLink[] | undefined {

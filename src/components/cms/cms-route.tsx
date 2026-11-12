@@ -6,15 +6,17 @@ import { articleNewsCards, resolvedMenu } from "@/lib/cms/library";
 import { newsDateForSlug } from "@/lib/cms/news-date";
 import { articleJsonLd, jsonLdHtml } from "@/lib/cms/seo";
 import { getPublishedPage } from "@/lib/cms/storage";
-import type { CmsLink } from "@/lib/cms/types";
+import type { CmsFooter, CmsLink } from "@/lib/cms/types";
 
 function MissingChrome({
   menu,
+  footer,
   title,
   body,
   actions = false,
 }: {
   menu?: CmsLink[];
+  footer?: CmsFooter | null;
   title: string;
   body: string;
   actions?: boolean;
@@ -35,15 +37,16 @@ function MissingChrome({
           ) : null}
         </div>
       </main>
-      <SiteFooter />
+      <SiteFooter footer={footer} />
     </div>
   );
 }
 
-export function MissingPage({ menu }: { menu?: CmsLink[] }) {
+export function MissingPage({ menu, footer }: { menu?: CmsLink[]; footer?: CmsFooter | null }) {
   return (
     <MissingChrome
       menu={menu}
+      footer={footer}
       title="Sidan finns inte"
       body="Det finns ingen sida på den här sökvägen."
       actions
@@ -65,8 +68,9 @@ export async function CmsRoute({ slug }: { slug: string }) {
   }
 
   const menu = resolvedMenu(stored.state.menu);
+  const footer = stored.state.footer;
   const page = getPublishedPage(slug, stored.state.pages);
-  if (!page) return <MissingPage menu={menu} />;
+  if (!page) return <MissingPage menu={menu} footer={footer} />;
 
   const publishedAt = newsDateForSlug(page.slug, stored.state.pages);
   const jsonLd = articleJsonLd(page, publishedAt);
@@ -82,6 +86,7 @@ export async function CmsRoute({ slug }: { slug: string }) {
       <PageBlocks
         page={page}
         menu={menu}
+        footer={footer}
         publishedAt={publishedAt}
         articleItems={articleNewsCards(stored.state.pages)}
       />

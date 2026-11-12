@@ -62,8 +62,11 @@ import {
   createTextColumnSection,
   fieldsFor,
   isArticlePage,
+  defaultFooter,
+  FOOTER_PAGE_ID,
   isBuiltinMenuTemplate,
   isBuiltinNewsTemplate,
+  isFooterPage,
   isNewsBlock,
   MENU_TEMPLATE_SLUG,
   library,
@@ -73,6 +76,7 @@ import {
   quotePlacementValue,
   removeArticleNews,
   editorTheme,
+  resolvedFooter,
   resolvedMenu,
   resolveTheme,
   syncAllArticleNews,
@@ -110,6 +114,7 @@ import {
   orderedPages,
   pagesRemovedWith,
   publishListPages,
+  type PublishListItem,
   pageDraft,
   pageTitle,
   SEED_VERSION,
@@ -132,7 +137,7 @@ import {
   type PublishedImageUse,
   type TemplateArchiveEntry,
 } from "@/lib/cms/storage";
-import type { BlockTheme, BlockType, CmsBlock, CmsCard, CmsLink, CmsPage, PageRole, PageSeo } from "@/lib/cms/types";
+import type { BlockTheme, BlockType, CmsBlock, CmsCard, CmsFooter, CmsLink, CmsPage, PageRole, PageSeo } from "@/lib/cms/types";
 import "./ui.css";
 import "./admin.css";
 
@@ -515,6 +520,7 @@ export default function AdminPage() {
   const [templates, setTemplates] = useState<CmsTemplate[]>([]);
   const [templateArchive, setTemplateArchive] = useState<TemplateArchiveEntry[]>([]);
   const [menu, setMenu] = useState<CmsLink[]>([]);
+  const [footer, setFooter] = useState<CmsFooter>(defaultFooter());
   const [deleteSlug, setDeleteSlug] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<"page" | "template" | null>(null);
   const [deleteInput, setDeleteInput] = useState("");
@@ -528,6 +534,7 @@ export default function AdminPage() {
   const templatesRef = useRef(templates);
   const templateArchiveRef = useRef(templateArchive);
   const menuRef = useRef(menu);
+  const footerRef = useRef(footer);
   const etagRef = useRef<string | null>(null);
   const confirmedRef = useRef<CmsState>({
     pages: [],
@@ -550,6 +557,7 @@ export default function AdminPage() {
   templatesRef.current = templates;
   templateArchiveRef.current = templateArchive;
   menuRef.current = menu;
+  footerRef.current = footer;
   draftBlocksRef.current = draftBlocks;
   titleInputRef.current = titleInput;
   parentSlugRef.current = parentSlug;
@@ -562,6 +570,7 @@ export default function AdminPage() {
       templates: templatesRef.current,
       templateArchive: templateArchiveRef.current,
       menu: menuRef.current,
+      footer: footerRef.current,
     };
   }
 
@@ -581,13 +590,16 @@ export default function AdminPage() {
     templatesRef.current = state.templates;
     templateArchiveRef.current = state.templateArchive;
     const nextMenu = resolvedMenu(state.menu);
+    const nextFooter = resolvedFooter(state.footer);
     menuRef.current = nextMenu;
+    footerRef.current = nextFooter;
     etagRef.current = etag;
     setPages(state.pages);
     setArchive(state.archive);
     setTemplates(state.templates);
     setTemplateArchive(state.templateArchive);
     setMenu(nextMenu);
+    setFooter(nextFooter);
     setSelectedSlug((current) => current ?? orderedPages(state.pages)[0]?.slug ?? null);
   }
 
@@ -819,6 +831,9 @@ export default function AdminPage() {
   const visibleTemplateOptions = panel === "news" ? newsTemplateOptions : templateOptions;
   const templatePage = visibleTemplateOptions.find((page) => page.slug === templateSlug) ?? null;
   const menuSelected = panel === "create" && isBuiltinMenuTemplate(templateSlug ?? "");
+  const footerSelected = panel === "create" && isFooterPage(templateSlug ?? "");
+  const menuInPages = panel === "pages" && selectedSlug === MENU_TEMPLATE_SLUG;
+  const footerInPages = panel === "pages" && selectedSlug === FOOTER_PAGE_ID;
   const articleItems = articleNewsCards(pages);
   const pendingDelete =
     deleteTarget === "page" && deleteSlug !== null
@@ -976,6 +991,12 @@ export default function AdminPage() {
     void scheduleSave();
   }
 
+  function updateFooter(next: CmsFooter) {
+    footerRef.current = next;
+    setFooter(next);
+    void scheduleSave();
+  }
+
   function persist(updater: (current: CmsPage[]) => CmsPage[]) {
     const next = syncAllArticleNews(updater(pagesRef.current));
     pagesRef.current = next;
@@ -1020,7 +1041,7 @@ export default function AdminPage() {
     setStructureSlug(null);
     setTemplateSlug(slug);
     setNotice(null);
-    if (isBuiltinMenuTemplate(slug)) {
+    if (isBuiltinMenuTemplate(slug) || isFooterPage(slug)) {
       setDraftBlocks([]);
       setTitleInput("");
       setParentSlug("");
@@ -1084,8 +1105,11 @@ export default function AdminPage() {
 
   function chooseEditPage(slug: string) {
     setNewsEditSlug(null);
-    if (isBuiltinMenuTemplate(slug)) {
-      if (isBuiltinMenuTemplate(templateSlug ?? "")) {
+    if (isBuiltinMenuTemplate(slug) || isFooterPage(slug)) {
+      const already =
+        (isBuiltinMenuTemplate(slug) && isBuiltinMenuTemplate(templateSlug ?? "")) ||
+        (isFooterPage(slug) && isFooterPage(templateSlug ?? ""));
+      if (already) {
         setNotice(null);
         return;
       }
@@ -1837,40 +1861,91 @@ export default function AdminPage() {
               <div className="admin-pages-layout">
                 <section aria-label="Befintliga sidor">
                   <ul className="admin-page-list">
-                    {listedPages.map(({ page, child }) => (
-                      <li key={page.slug || "/"} className={child ? "is-child" : undefined}>
-                        <button
-                          type="button"
-                          className={page.slug === selectedSlug ? "is-selected" : undefined}
-                          onClick={() => {
-                            setSelectedSlug(page.slug);
-                            setNotice(null);
-                          }}
-                        >
-                          <span className="admin-page-row">
-                            <span className="admin-page-name">{pageTitle(page)}</span>
-                            <span className="admin-page-flags">
-                              <span className={page.published ? "admin-status is-live" : "admin-status"}>
-                                {page.published ? "Publicerad" : "Utkast"}
+                    {withSiteChrome(listedPages).map((row) => {
+                      if (row.kind === "menu" || row.kind === "footer") {
+                        const selectedRow = row.kind === "menu" ? menuInPages : footerInPages;
+                        return (
+                          <li key={row.kind}>
+                            <button
+                              type="button"
+                              className={selectedRow ? "is-selected" : undefined}
+                              onClick={() => {
+                                setSelectedSlug(row.kind === "menu" ? MENU_TEMPLATE_SLUG : FOOTER_PAGE_ID);
+                                setNotice(null);
+                              }}
+                            >
+                              <span className="admin-page-row">
+                                <span className="admin-page-name">{row.kind === "menu" ? "Meny" : "Footer"}</span>
                               </span>
-                              {hasPendingChanges(page) ? (
-                                <span className="admin-status">Ändrad</span>
-                              ) : null}
-                              {incompleteSlugs.has(page.slug) ? (
-                                <span className="admin-status is-incomplete">Ofullständig</span>
-                              ) : null}
+                              <small>{row.kind === "menu" ? "Huvudmeny" : "Adress och LinkedIn"}</small>
+                            </button>
+                          </li>
+                        );
+                      }
+                      const { page, child } = row;
+                      return (
+                        <li key={page.slug || "/"} className={child ? "is-child" : undefined}>
+                          <button
+                            type="button"
+                            className={page.slug === selectedSlug ? "is-selected" : undefined}
+                            onClick={() => {
+                              setSelectedSlug(page.slug);
+                              setNotice(null);
+                            }}
+                          >
+                            <span className="admin-page-row">
+                              <span className="admin-page-name">{pageTitle(page)}</span>
+                              <span className="admin-page-flags">
+                                <span className={page.published ? "admin-status is-live" : "admin-status"}>
+                                  {page.published ? "Publicerad" : "Utkast"}
+                                </span>
+                                {hasPendingChanges(page) ? (
+                                  <span className="admin-status">Ändrad</span>
+                                ) : null}
+                                {incompleteSlugs.has(page.slug) ? (
+                                  <span className="admin-status is-incomplete">Ofullständig</span>
+                                ) : null}
+                              </span>
                             </span>
-                          </span>
-                          <small>
-                            {pageAddress(page.slug)}
-                          </small>
-                        </button>
-                      </li>
-                    ))}
+                            <small>
+                              {pageAddress(page.slug)}
+                            </small>
+                          </button>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </section>
 
-                {selected ? (
+                {menuInPages ? (
+                  <section aria-label="Meny">
+                    <div className="admin-main-head">
+                      <div>
+                        <p className="admin-kicker">Meny</p>
+                        <h2 className="admin-title">Meny</h2>
+                        <p className="admin-preview">Visas på alla sidor</p>
+                      </div>
+                    </div>
+                    <section className="admin-canvas" aria-label="Menyrader">
+                      <h3>Menyn</h3>
+                      <MenuRows items={menu} pages={orderedPages(pages)} onChange={updateMenu} />
+                    </section>
+                  </section>
+                ) : footerInPages ? (
+                  <section aria-label="Footer">
+                    <div className="admin-main-head">
+                      <div>
+                        <p className="admin-kicker">Footer</p>
+                        <h2 className="admin-title">Footer</h2>
+                        <p className="admin-preview">Visas på alla sidor</p>
+                      </div>
+                    </div>
+                    <section className="admin-canvas" aria-label="Footerfält">
+                      <h3>Footern</h3>
+                      <FooterFields footer={footer} onChange={updateFooter} />
+                    </section>
+                  </section>
+                ) : selected ? (
                   <section aria-label="Vald sida">
                     <div className="admin-main-head">
                       <div>
@@ -1960,11 +2035,20 @@ export default function AdminPage() {
                   <p className="admin-empty">Inga sidor.</p>
                 )}
 
-                {selected && selectedDraft ? (
+                {menuInPages ? (
+                  <PageMiniature url={pageAddress("")} summary="Meny" menu={menu} footer={footer}>
+                    <MenuPreview items={menu} footer={footer} />
+                  </PageMiniature>
+                ) : footerInPages ? (
+                  <PageMiniature url={pageAddress("")} summary="Footer" footer={footer}>
+                    <SiteFooter footer={footer} />
+                  </PageMiniature>
+                ) : selected && selectedDraft ? (
                   <PageMiniature
                     url={pageAddress(selected.slug)}
                     page={selectedDraft}
                     menu={menu}
+                    footer={footer}
                     publishedAt={newsDateForSlug(selected.slug, pages)}
                     articleItems={articleItems}
                   />
@@ -2006,7 +2090,8 @@ export default function AdminPage() {
                               value={
                                 structurePage ||
                                 templateSlug === null ||
-                                isBuiltinMenuTemplate(templateSlug)
+                                isBuiltinMenuTemplate(templateSlug) ||
+                                isFooterPage(templateSlug)
                                   ? UNSELECTED_TEMPLATE
                                   : slugToOption(templateSlug)
                               }
@@ -2037,6 +2122,8 @@ export default function AdminPage() {
                               value={
                                 menuSelected
                                   ? slugToOption(MENU_TEMPLATE_SLUG)
+                                  : footerSelected
+                                    ? FOOTER_PAGE_ID
                                   : structureSlug === null
                                     ? UNSELECTED_PAGE
                                     : slugToOption(structureSlug)
@@ -2045,16 +2132,7 @@ export default function AdminPage() {
                                 if (slug === UNSELECTED_PAGE) return;
                                 chooseEditPage(optionToSlug(slug));
                               }}
-                              options={[
-                                { value: UNSELECTED_PAGE, label: "Välj sida", disabled: true },
-                                { value: slugToOption(MENU_TEMPLATE_SLUG), label: "Meny" },
-                                ...listedPages.map(({ page, child }) => ({
-                                  value: slugToOption(page.slug),
-                                  label: child
-                                    ? `– ${pageLinkLabel(page)}`
-                                    : pageLinkLabel(page),
-                                })),
-                              ]}
+                              options={editPageChoices(listedPages)}
                             />
                           </label>
                         </div>
@@ -2090,6 +2168,16 @@ export default function AdminPage() {
                         onReorder={reorderDraftBlocks}
                         onAdd={() => setCatalogOpen(true)}
                       />
+                    ) : footerSelected ? (
+                      <div className="admin-on-page">
+                        <h3>På Footer</h3>
+                        <p>
+                          {[footer.street, footer.postal, footer.phone, footer.email]
+                            .map((line) => line.trim())
+                            .filter(Boolean)
+                            .join(", ") || "Ingen adress ännu."}
+                        </p>
+                      </div>
                     ) : menuSelected ? (
                       <div className="admin-on-page">
                         <h3>På Meny</h3>
@@ -2234,6 +2322,19 @@ export default function AdminPage() {
                         >
                           Ta bort nyhet
                         </Button>
+                      </section>
+                    </section>
+                  ) : footerSelected ? (
+                    <section aria-label="Footer">
+                      <div className="admin-main-head">
+                        <div>
+                          <p className="admin-kicker">Footer</p>
+                          <h2 className="admin-title">Footer</h2>
+                        </div>
+                      </div>
+                      <section className="admin-canvas" aria-label="Footerfält">
+                        <h3>Footern</h3>
+                        <FooterFields footer={footer} onChange={updateFooter} />
                       </section>
                     </section>
                   ) : menuSelected ? (
@@ -2383,17 +2484,23 @@ export default function AdminPage() {
                       url={pageAddress(newsArticle.slug)}
                       page={newsDraft ?? newsArticle}
                       menu={menu}
+                      footer={footer}
                       publishedAt={newsDateForSlug(newsArticle.slug, pages)}
                       articleItems={articleItems}
                     />
+                  ) : footerSelected ? (
+                    <PageMiniature url={pageAddress("")} summary="Footer" footer={footer}>
+                      <SiteFooter footer={footer} />
+                    </PageMiniature>
                   ) : menuSelected ? (
-                    <PageMiniature url={pageAddress("")} summary="Meny">
-                      <MenuPreview items={menu} />
+                    <PageMiniature url={pageAddress("")} summary="Meny" menu={menu} footer={footer}>
+                      <MenuPreview items={menu} footer={footer} />
                     </PageMiniature>
                   ) : (
                     <PageMiniature
                       url={pageAddress(previewSlug)}
                       menu={menu}
+                      footer={footer}
                       publishedAt={newsDateForSlug(previewSlug, pages)}
                       articleItems={articleItems}
                       page={{
@@ -2525,6 +2632,7 @@ export default function AdminPage() {
                 <PageMiniature
                   url=""
                   menu={menu}
+                  footer={footer}
                   publishedAt={newsDateForSlug(blankMode ? "" : (componentPage?.slug ?? ""), pages)}
                   articleItems={articleItems}
                   page={{
@@ -3566,6 +3674,52 @@ function pageLinkLabel(page: CmsPage): string {
   return `${pageTitle(page)} (${pageAddress(page.slug)})`;
 }
 
+type SiteChromeRow =
+  | { kind: "page"; page: CmsPage; child: boolean }
+  | { kind: "menu" }
+  | { kind: "footer" };
+
+function withSiteChrome(items: PublishListItem[]): SiteChromeRow[] {
+  const rows: SiteChromeRow[] = [];
+  let placed = false;
+  for (const item of items) {
+    rows.push({ kind: "page", page: item.page, child: item.child });
+    if (!placed && item.page.role === "home") {
+      rows.push({ kind: "menu" }, { kind: "footer" });
+      placed = true;
+    }
+  }
+  if (!placed) rows.unshift({ kind: "menu" }, { kind: "footer" });
+  return rows;
+}
+
+function editPageChoices(items: PublishListItem[]) {
+  const options: { value: string; label: string; disabled?: boolean }[] = [
+    { value: UNSELECTED_PAGE, label: "Välj sida", disabled: true },
+  ];
+  let placed = false;
+  for (const { page, child } of items) {
+    options.push({
+      value: slugToOption(page.slug),
+      label: child ? `– ${pageLinkLabel(page)}` : pageLinkLabel(page),
+    });
+    if (!placed && page.role === "home") {
+      options.push(
+        { value: slugToOption(MENU_TEMPLATE_SLUG), label: "Meny" },
+        { value: FOOTER_PAGE_ID, label: "Footer" },
+      );
+      placed = true;
+    }
+  }
+  if (!placed) {
+    options.push(
+      { value: slugToOption(MENU_TEMPLATE_SLUG), label: "Meny" },
+      { value: FOOTER_PAGE_ID, label: "Footer" },
+    );
+  }
+  return options;
+}
+
 function pageHrefChoices(pages: CmsPage[]): { value: string; label: string }[] {
   return orderedPages(pages).map((page) => ({
     value: `/${page.slug}`,
@@ -3738,7 +3892,7 @@ function PurgeArchiveDialog({
   );
 }
 
-function MenuPreview({ items }: { items: CmsLink[] }) {
+function MenuPreview({ items, footer }: { items: CmsLink[]; footer?: CmsFooter | null }) {
   const links = items
     .map((item) => ({
       label: item.label.trim(),
@@ -3792,7 +3946,7 @@ function MenuPreview({ items }: { items: CmsLink[] }) {
           </ul>
         </nav>
       </div>
-      <SiteFooter />
+      <SiteFooter footer={footer} />
     </div>
   );
 }
@@ -3800,6 +3954,7 @@ function MenuPreview({ items }: { items: CmsLink[] }) {
 function PageMiniature({
   page,
   menu,
+  footer,
   url,
   summary,
   children,
@@ -3808,6 +3963,7 @@ function PageMiniature({
 }: {
   page?: CmsPage;
   menu?: CmsLink[];
+  footer?: CmsFooter | null;
   url: string;
   summary?: string;
   children?: ReactNode;
@@ -3887,6 +4043,7 @@ function PageMiniature({
                 <PageBlocks
                   page={page}
                   menu={menu}
+                  footer={footer}
                   preview
                   publishedAt={publishedAt}
                   articleItems={articleItems}
@@ -4888,6 +5045,82 @@ function PageChoice({
         ]}
       />
     </AdminField>
+  );
+}
+
+function FooterFields({
+  footer,
+  onChange,
+}: {
+  footer: CmsFooter;
+  onChange: (footer: CmsFooter) => void;
+}) {
+  function patchLink(index: number, next: Partial<CmsFooter["links"][number]>) {
+    onChange({
+      ...footer,
+      links: footer.links.map((link, linkIndex) => (linkIndex === index ? { ...link, ...next } : link)),
+    });
+  }
+
+  return (
+    <div className="admin-create-fields">
+      <AdminField label="Adress">
+        <Input value={footer.street} onChange={(event) => onChange({ ...footer, street: event.target.value })} />
+      </AdminField>
+      <AdminField label="Postnummer och ort">
+        <Input value={footer.postal} onChange={(event) => onChange({ ...footer, postal: event.target.value })} />
+      </AdminField>
+      <AdminField label="Telefon">
+        <Input value={footer.phone} onChange={(event) => onChange({ ...footer, phone: event.target.value })} />
+      </AdminField>
+      <AdminField label="E-post">
+        <Input
+          type="email"
+          value={footer.email}
+          onChange={(event) => onChange({ ...footer, email: event.target.value })}
+        />
+      </AdminField>
+      <fieldset className="admin-cards">
+        <legend>LinkedIn</legend>
+        <ol>
+          {footer.links.map((link, index) => (
+            <li key={index}>
+              <div className="admin-block-head">
+                <strong>Ikon {index + 1}</strong>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onChange({ ...footer, links: footer.links.filter((_, linkIndex) => linkIndex !== index) })
+                  }
+                >
+                  Ta bort
+                </button>
+              </div>
+              <AdminField label="Text">
+                <Input
+                  value={link.label}
+                  placeholder="Mindstreet på LinkedIn"
+                  onChange={(event) => patchLink(index, { label: event.target.value })}
+                />
+              </AdminField>
+              <AdminField label="Länk">
+                <Input
+                  value={link.href}
+                  placeholder="https://www.linkedin.com/company/mindstreet"
+                  onChange={(event) => patchLink(index, { href: event.target.value })}
+                />
+              </AdminField>
+            </li>
+          ))}
+        </ol>
+        <button
+          type="button"
+          onClick={() => onChange({ ...footer, links: [...footer.links, { label: "", href: "" }] })}
+        >
+          Lägg till LinkedIn-ikon
+        </button>
+      </fieldset>
+    </div>
   );
 }
 

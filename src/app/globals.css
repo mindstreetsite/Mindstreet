@@ -1060,9 +1060,16 @@ p {
 
 .site-footer > img:not(.footer-shape),
 .site-footer address,
-.site-footer .linkedin {
+.site-footer .footer-links {
   position: relative;
   z-index: 1;
+}
+
+.footer-links {
+  display: flex;
+  gap: 16px;
+  margin-left: auto;
+  align-self: flex-end;
 }
 
 .site-footer img {
@@ -1097,10 +1104,8 @@ p {
 .linkedin {
   position: relative;
   display: inline-flex;
-  align-self: flex-end;
   width: 47px;
   height: 47px;
-  margin-left: auto;
   flex-shrink: 0;
 }
 
@@ -1254,7 +1259,7 @@ p {
     margin: 0;
   }
 
-  .site-footer .linkedin {
+  .site-footer .footer-links {
     grid-column: 2;
     grid-row: 1 / span 2;
     align-self: center;

@@ -1,7 +1,8 @@
-import { resolvedMenu } from "@/lib/cms/library";
+import { resolvedFooter, resolvedMenu } from "@/lib/cms/library";
 import {
   hydrateArchiveEntry,
   hydrateCmsLinks,
+  hydrateFooter,
   hydratePage,
   hydrateTemplate,
   hydrateTemplateArchiveEntry,
@@ -12,7 +13,7 @@ import {
   type PageArchiveEntry,
   type TemplateArchiveEntry,
 } from "@/lib/cms/storage";
-import type { CmsLink, CmsPage } from "@/lib/cms/types";
+import type { CmsFooter, CmsLink, CmsPage } from "@/lib/cms/types";
 
 export type ItemChange<T> = {
   id: string;
@@ -26,6 +27,7 @@ export type CmsChange = {
   templates: ItemChange<CmsTemplate>[];
   templateArchive: ItemChange<TemplateArchiveEntry>[];
   menu?: { next: CmsLink[]; base: CmsLink[] | null };
+  footer?: { next: CmsFooter; base: CmsFooter | null };
 };
 
 export type CmsConflicts = {
@@ -34,6 +36,7 @@ export type CmsConflicts = {
   templates: string[];
   templateArchive: string[];
   menu: boolean;
+  footer: boolean;
 };
 
 export type ApplyChangeResult = {
@@ -65,6 +68,7 @@ export function emptyConflicts(): CmsConflicts {
     templates: [],
     templateArchive: [],
     menu: false,
+    footer: false,
   };
 }
 
@@ -74,7 +78,8 @@ export function isChangeEmpty(change: CmsChange): boolean {
     change.archive.length === 0 &&
     change.templates.length === 0 &&
     change.templateArchive.length === 0 &&
-    change.menu === undefined
+    change.menu === undefined &&
+    change.footer === undefined
   );
 }
 
@@ -84,7 +89,8 @@ export function hasConflicts(conflicts: CmsConflicts): boolean {
     conflicts.archive.length > 0 ||
     conflicts.templates.length > 0 ||
     conflicts.templateArchive.length > 0 ||
-    conflicts.menu
+    conflicts.menu ||
+    conflicts.footer
   );
 }
 
@@ -125,6 +131,11 @@ export function diffStates(base: CmsState, next: CmsState): CmsChange {
   const nextMenu = resolvedMenu(next.menu);
   if (!jsonEqual(baseMenu, nextMenu)) {
     change.menu = { base: base.menu ?? null, next: nextMenu };
+  }
+  const baseFooter = resolvedFooter(base.footer);
+  const nextFooter = resolvedFooter(next.footer);
+  if (!jsonEqual(baseFooter, nextFooter)) {
+    change.footer = { base: base.footer ?? null, next: nextFooter };
   }
   return change;
 }
@@ -211,6 +222,23 @@ export function applyChange(
     }
   }
 
+  let footer = latest.footer;
+  let footerConflict = false;
+  let footerApplied = false;
+  if (change.footer) {
+    const currentFooter = resolvedFooter(latest.footer);
+    const nextFooter = resolvedFooter(change.footer.next);
+    const baseFooter = resolvedFooter(change.footer.base ?? undefined);
+    if (jsonEqual(currentFooter, nextFooter)) {
+      footer = change.footer.next;
+    } else if (trust || jsonEqual(currentFooter, baseFooter)) {
+      footer = change.footer.next;
+      footerApplied = true;
+    } else {
+      footerConflict = true;
+    }
+  }
+
   const nextPages = pages.items;
   const nextTemplates = templatesNotMatchingPages(templates.items, nextPages);
   const nextTemplateArchive = templateArchive.items.filter((entry) => !entry.hiddenPage);
@@ -222,6 +250,7 @@ export function applyChange(
       templates: nextTemplates,
       templateArchive: nextTemplateArchive,
       menu,
+      footer,
     },
     conflicts: {
       pages: pages.conflicts,
@@ -229,13 +258,15 @@ export function applyChange(
       templates: templates.conflicts,
       templateArchive: templateArchive.conflicts,
       menu: menuConflict,
+      footer: footerConflict,
     },
     applied:
       pages.applied ||
       archive.applied ||
       templates.applied ||
       templateArchive.applied ||
-      menuApplied,
+      menuApplied ||
+      footerApplied,
   };
 }
 
@@ -318,12 +349,30 @@ function absorbMenu(
   return { menu: local, confirmed, conflict: true };
 }
 
+function absorbFooter(
+  local: CmsFooter | undefined,
+  confirmed: CmsFooter | undefined,
+  remote: CmsFooter | undefined,
+): { footer: CmsFooter | undefined; confirmed: CmsFooter | undefined; conflict: boolean } {
+  const ours = resolvedFooter(local);
+  const base = resolvedFooter(confirmed);
+  const theirs = resolvedFooter(remote);
+  if (jsonEqual(ours, theirs) || jsonEqual(ours, base)) {
+    return { footer: remote, confirmed: remote, conflict: false };
+  }
+  if (jsonEqual(theirs, base)) {
+    return { footer: local, confirmed, conflict: false };
+  }
+  return { footer: local, confirmed, conflict: true };
+}
+
 function finishState(
   pages: CmsPage[],
   archive: PageArchiveEntry[],
   templates: CmsTemplate[],
   templateArchive: TemplateArchiveEntry[],
   menu: CmsLink[] | undefined,
+  footer: CmsFooter | undefined,
 ): CmsState {
   return {
     pages,
@@ -331,6 +380,7 @@ function finishState(
     templates: templatesNotMatchingPages(templates, pages),
     templateArchive: templateArchive.filter((entry) => !entry.hiddenPage),
     menu,
+    footer,
   };
 }
 
@@ -350,12 +400,14 @@ export function absorbRemote(local: CmsState, confirmed: CmsState, remote: CmsSt
     (entry) => entry.id,
   );
   const menu = absorbMenu(local.menu, confirmed.menu, remote.menu);
+  const footer = absorbFooter(local.footer, confirmed.footer, remote.footer);
   const conflicts: CmsConflicts = {
     pages: pages.conflicts,
     archive: archive.conflicts,
     templates: templates.conflicts,
     templateArchive: templateArchive.conflicts,
     menu: menu.conflict,
+    footer: footer.conflict,
   };
 
   return {
@@ -365,6 +417,7 @@ export function absorbRemote(local: CmsState, confirmed: CmsState, remote: CmsSt
       templates.items,
       templateArchive.items,
       menu.menu,
+      footer.footer,
     ),
     confirmed: finishState(
       pages.confirmed,
@@ -372,6 +425,7 @@ export function absorbRemote(local: CmsState, confirmed: CmsState, remote: CmsSt
       templates.confirmed,
       templateArchive.confirmed,
       menu.confirmed,
+      footer.confirmed,
     ),
     conflicts,
     advanceEtag: !hasConflicts(conflicts),
@@ -424,6 +478,14 @@ export function parseCmsChange(value: unknown): CmsChange | null {
     menu.base == null ? null : (hydrateCmsLinks(menu.base) ?? null);
   if (menu.base != null && base === null) return null;
   change.menu = { next, base };
+  if (raw.footer === undefined) return change;
+  if (!raw.footer || typeof raw.footer !== "object") return null;
+  const footer = raw.footer as { next?: unknown; base?: unknown };
+  const nextFooter = hydrateFooter(footer.next);
+  if (!nextFooter) return null;
+  const baseFooter = footer.base == null ? null : (hydrateFooter(footer.base) ?? null);
+  if (footer.base != null && baseFooter === null) return null;
+  change.footer = { next: nextFooter, base: baseFooter };
   return change;
 }
 
@@ -440,6 +502,9 @@ export function conflictNotice(conflicts: CmsConflicts, pages: CmsPage[]): strin
   }
   if (conflicts.menu) {
     return "Menyn har ändrats av någon annan. Ladda om innan du fortsätter.";
+  }
+  if (conflicts.footer) {
+    return "Footern har ändrats av någon annan. Ladda om innan du fortsätter.";
   }
   if (conflicts.templates.length === 1) {
     return `Mallen ${conflicts.templates[0]} har ändrats av någon annan. Ladda om innan du fortsätter.`;

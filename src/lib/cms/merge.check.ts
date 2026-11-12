@@ -9,6 +9,7 @@ import {
   parseCmsChange,
   type CmsChange,
 } from "./merge";
+import { defaultFooter } from "./library";
 import type { CmsState } from "./storage";
 import type { CmsPage } from "./types";
 
@@ -115,5 +116,17 @@ assert(absorbedClash.conflicts.pages.includes("kontakta-oss"), "Absorb conflict 
 assert(!absorbedClash.advanceEtag, "Same page absorb does not advance etag");
 assert(absorbedClash.state.pages.find((item) => item.slug === "kontakta-oss")?.title === "Ny kontakt", "Absorb conflict keeps local draft");
 assert(absorbedClash.confirmed.pages.find((item) => item.slug === "kontakta-oss")?.title === "Kontakta oss", "Absorb conflict keeps old base");
+
+const footerBase = state([home]);
+const footerNext = {
+  ...footerBase,
+  footer: { ...defaultFooter(), street: "Ny gata 1" },
+};
+const footerChange = diffStates(footerBase, footerNext);
+assert(footerChange.footer?.next.street === "Ny gata 1", "Footer edits are their own change");
+assert(footerChange.pages.length === 0, "Footer edits do not touch pages");
+const footerApplied = applyChange(footerBase, footerChange);
+assert(footerApplied.applied && footerApplied.state.footer?.street === "Ny gata 1", "Footer change applies");
+assert(isChangeEmpty(diffStates(footerBase, footerBase)), "Default footer sends nothing");
 
 console.log("cms merge ok");

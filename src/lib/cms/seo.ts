@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { footer, intro } from "@/content/home";
+import { intro } from "@/content/home";
 import { plainText } from "@/lib/cms/inline";
-import { isArticlePage, SITE_ORIGIN } from "@/lib/cms/library";
-import type { CmsPage, PageSeo } from "@/lib/cms/types";
+import { isArticlePage, resolvedFooter, SITE_ORIGIN } from "@/lib/cms/library";
+import type { CmsFooter, CmsPage, PageSeo } from "@/lib/cms/types";
 
 export const SITE_NAME = "Mindstreet";
 export const SITE_DESCRIPTION = intro.heading;
@@ -128,23 +128,24 @@ export function pageMetadata(page: CmsPage | null): Metadata {
   };
 }
 
-export function organizationJsonLd() {
-  const postal = parsePostal(footer.address[1] ?? "");
+export function organizationJsonLd(footer?: CmsFooter | null) {
+  const details = resolvedFooter(footer);
+  const postal = parsePostal(details.postal);
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: SITE_NAME,
     url: SITE_ORIGIN,
-    email: footer.email,
-    telephone: footer.phone.label,
+    email: details.email,
+    telephone: details.phone,
     address: {
       "@type": "PostalAddress",
-      streetAddress: footer.address[0],
+      streetAddress: details.street,
       postalCode: postal.code,
       addressLocality: postal.city,
       addressCountry: "SE",
     },
-    sameAs: [footer.linkedIn],
+    sameAs: details.links.map((link) => link.href.trim()).filter(Boolean),
   };
 }
 

@@ -9,7 +9,7 @@ import { figureFill, surfaceById } from "@/lib/design/palette";
 import { HeadingText, plainText, renderBreaks, renderInline, RichText } from "@/lib/cms/inline";
 import { articleParagraphs, quoteAfterIndex, resolveTheme } from "@/lib/cms/library";
 import { formatNewsDate } from "@/lib/cms/news-date";
-import type { CmsBlock, CmsCard, CmsLink, CmsPage, ShapeColor } from "@/lib/cms/types";
+import type { CmsBlock, CmsCard, CmsFooter, CmsLink, CmsPage, ShapeColor } from "@/lib/cms/types";
 import "./page-blocks.css";
 
 function themedProps(block: CmsBlock, className: string) {
@@ -26,12 +26,14 @@ function themedProps(block: CmsBlock, className: string) {
 export function PageBlocks({
   page,
   menu,
+  footer,
   preview = false,
   publishedAt = "",
   articleItems = [],
 }: {
   page: CmsPage;
   menu?: CmsLink[];
+  footer?: CmsFooter | null;
   preview?: boolean;
   publishedAt?: string;
   articleItems?: CmsCard[];
@@ -70,7 +72,7 @@ export function PageBlocks({
       {newsFeed.length > 0 ? (
         <NewsBlock heading="Nyheter och artiklar" items={newsFeed} preview={preview} pageSize={12} />
       ) : null}
-      <SiteFooter />
+      <SiteFooter footer={footer} />
     </div>
   );
 }

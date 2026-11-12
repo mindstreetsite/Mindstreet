@@ -5,7 +5,7 @@ export function LockedFooterNote() {
         <strong>Footer</strong>
         <span>Alltid med</span>
       </div>
-      <p>Kontakt, adress och LinkedIn. Följer med på varje sida och kan inte tas bort.</p>
+      <p>Kontakt, adress och LinkedIn. Följer med på varje sida. Ändra dem under Publisera sidor, på Footer.</p>
     </div>
   );
 }
