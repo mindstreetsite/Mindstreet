@@ -2,6 +2,7 @@ import { ArticleBackLink } from "@/components/cms/article-back-link";
 import { ContactFormFields } from "@/components/cms/contact-form";
 import { NewsBlock } from "@/components/cms/news-block";
 import { OfferingBlock } from "@/components/cms/offering-block";
+import { ScrollReveal } from "@/components/cms/scroll-reveal";
 import { Header } from "@/components/header";
 import { SiteFooter } from "@/components/site-footer";
 import { blockSurfaceProps } from "@/lib/cms/block-style";
@@ -55,7 +56,7 @@ export function PageBlocks({
     : [];
 
   return (
-    <div id="top">
+    <div id="top" className={preview ? undefined : "site-motion"}>
       {hasOwnHeader ? null : <Header variant="bar" theme="ink" items={menu} />}
       {page.blocks.map((block, index) => (
         <BlockView
@@ -73,6 +74,7 @@ export function PageBlocks({
         <NewsBlock heading="Nyheter och artiklar" items={newsFeed} preview={preview} pageSize={12} />
       ) : null}
       <SiteFooter footer={footer} />
+      {preview ? null : <ScrollReveal />}
     </div>
   );
 }
