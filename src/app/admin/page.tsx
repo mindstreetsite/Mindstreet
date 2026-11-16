@@ -4274,10 +4274,12 @@ function RichComposer({
   onChange: (value: string) => void;
 }) {
   const parts = splitRichParts(value);
-  const firstIsText = parts[0]?.kind === "text";
-  const lastIsText = parts[parts.length - 1]?.kind === "text";
-  const head = firstIsText && parts[0].kind === "text" ? parts[0].text : "";
-  const tail = lastIsText && parts[parts.length - 1].kind === "text" ? parts[parts.length - 1].text : "";
+  const first = parts[0];
+  const last = parts[parts.length - 1];
+  const firstIsText = first?.kind === "text";
+  const lastIsText = last?.kind === "text";
+  const head = first?.kind === "text" ? first.text : "";
+  const tail = last?.kind === "text" ? last.text : "";
   const middle = parts.slice(firstIsText ? 1 : 0, lastIsText ? -1 : undefined);
   const headRef = useRef<HTMLTextAreaElement>(null);
   const tailRef = useRef<HTMLTextAreaElement>(null);
