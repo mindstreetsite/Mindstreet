@@ -28,6 +28,7 @@ export function PageBlocks({
   page,
   menu,
   footer,
+  pages,
   preview = false,
   publishedAt = "",
   articleItems = [],
@@ -35,6 +36,7 @@ export function PageBlocks({
   page: CmsPage;
   menu?: CmsLink[];
   footer?: CmsFooter | null;
+  pages?: CmsPage[];
   preview?: boolean;
   publishedAt?: string;
   articleItems?: CmsCard[];
@@ -73,7 +75,7 @@ export function PageBlocks({
       {newsFeed.length > 0 ? (
         <NewsBlock heading="Nyheter och artiklar" items={newsFeed} preview={preview} pageSize={12} />
       ) : null}
-      <SiteFooter footer={footer} />
+      <SiteFooter footer={footer} menu={menu} pages={pages} />
       {preview ? null : <ScrollReveal />}
     </div>
   );

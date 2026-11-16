@@ -2036,12 +2036,12 @@ export default function AdminPage() {
                 )}
 
                 {menuInPages ? (
-                  <PageMiniature url={pageAddress("")} summary="Meny" menu={menu} footer={footer}>
-                    <MenuPreview items={menu} footer={footer} />
+                  <PageMiniature url={pageAddress("")} summary="Meny" menu={menu} footer={footer} pages={pages}>
+                    <MenuPreview items={menu} footer={footer} pages={pages} />
                   </PageMiniature>
                 ) : footerInPages ? (
-                  <PageMiniature url={pageAddress("")} summary="Footer" footer={footer}>
-                    <SiteFooter footer={footer} />
+                  <PageMiniature url={pageAddress("")} summary="Footer" menu={menu} footer={footer} pages={pages}>
+                    <SiteFooter footer={footer} menu={menu} pages={pages} />
                   </PageMiniature>
                 ) : selected && selectedDraft ? (
                   <PageMiniature
@@ -2049,6 +2049,7 @@ export default function AdminPage() {
                     page={selectedDraft}
                     menu={menu}
                     footer={footer}
+                    pages={pages}
                     publishedAt={newsDateForSlug(selected.slug, pages)}
                     articleItems={articleItems}
                   />
@@ -2485,22 +2486,24 @@ export default function AdminPage() {
                       page={newsDraft ?? newsArticle}
                       menu={menu}
                       footer={footer}
+                      pages={pages}
                       publishedAt={newsDateForSlug(newsArticle.slug, pages)}
                       articleItems={articleItems}
                     />
                   ) : footerSelected ? (
-                    <PageMiniature url={pageAddress("")} summary="Footer" footer={footer}>
-                      <SiteFooter footer={footer} />
+                    <PageMiniature url={pageAddress("")} summary="Footer" menu={menu} footer={footer} pages={pages}>
+                      <SiteFooter footer={footer} menu={menu} pages={pages} />
                     </PageMiniature>
                   ) : menuSelected ? (
-                    <PageMiniature url={pageAddress("")} summary="Meny" menu={menu} footer={footer}>
-                      <MenuPreview items={menu} footer={footer} />
+                    <PageMiniature url={pageAddress("")} summary="Meny" menu={menu} footer={footer} pages={pages}>
+                      <MenuPreview items={menu} footer={footer} pages={pages} />
                     </PageMiniature>
                   ) : (
                     <PageMiniature
                       url={pageAddress(previewSlug)}
                       menu={menu}
                       footer={footer}
+                      pages={pages}
                       publishedAt={newsDateForSlug(previewSlug, pages)}
                       articleItems={articleItems}
                       page={{
@@ -2633,6 +2636,7 @@ export default function AdminPage() {
                   url=""
                   menu={menu}
                   footer={footer}
+                  pages={pages}
                   publishedAt={newsDateForSlug(blankMode ? "" : (componentPage?.slug ?? ""), pages)}
                   articleItems={articleItems}
                   page={{
@@ -3892,7 +3896,15 @@ function PurgeArchiveDialog({
   );
 }
 
-function MenuPreview({ items, footer }: { items: CmsLink[]; footer?: CmsFooter | null }) {
+function MenuPreview({
+  items,
+  footer,
+  pages,
+}: {
+  items: CmsLink[];
+  footer?: CmsFooter | null;
+  pages?: CmsPage[];
+}) {
   const links = items
     .map((item) => ({
       label: item.label.trim(),
@@ -3946,7 +3958,7 @@ function MenuPreview({ items, footer }: { items: CmsLink[]; footer?: CmsFooter |
           </ul>
         </nav>
       </div>
-      <SiteFooter footer={footer} />
+      <SiteFooter footer={footer} menu={items} pages={pages} />
     </div>
   );
 }
@@ -3955,6 +3967,7 @@ function PageMiniature({
   page,
   menu,
   footer,
+  pages,
   url,
   summary,
   children,
@@ -3964,6 +3977,7 @@ function PageMiniature({
   page?: CmsPage;
   menu?: CmsLink[];
   footer?: CmsFooter | null;
+  pages?: CmsPage[];
   url: string;
   summary?: string;
   children?: ReactNode;
@@ -4044,6 +4058,7 @@ function PageMiniature({
                   page={page}
                   menu={menu}
                   footer={footer}
+                  pages={pages}
                   preview
                   publishedAt={publishedAt}
                   articleItems={articleItems}

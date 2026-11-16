@@ -441,6 +441,65 @@ export function resolvedMenu(menu?: CmsLink[]): CmsLink[] {
   return defaultMenu();
 }
 
+const FOOTER_MENU_MATCHES = [
+  (label: string) => label.includes("bli en av oss"),
+  (label: string) => label.includes("erbjudande"),
+  (label: string) => label.includes("kontakta oss"),
+  (label: string) => label.includes("nyheter"),
+];
+
+function footerLabel(value: string): string {
+  return value
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/\*\*|__|\*|_|`/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function foldLabel(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/&/g, " och ")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function expertiseAreas(pages: CmsPage[] | undefined): CmsLink[] {
+  if (!pages?.length) return [];
+  const home = pages.find((page) => page.role === "home") ?? pages.find((page) => page.slug === "");
+  const ordered = home ? [home, ...pages.filter((page) => page !== home)] : pages;
+  for (const page of ordered) {
+    for (const block of page.blocks) {
+      if (block.type !== "expertise") continue;
+      const links = (block.items ?? [])
+        .map((item) => ({ label: footerLabel(item.heading), href: item.href.trim() }))
+        .filter((item) => item.label && item.href);
+      if (links.length > 0) return links;
+    }
+  }
+  return [];
+}
+
+/** Expert areas from the homepage, then the menu items that belong in the footer. */
+export function footerDirectory(
+  menu: CmsLink[] | undefined,
+  pages: CmsPage[] | undefined,
+): { areas: CmsLink[]; links: CmsLink[] } {
+  const items = (menu ?? [])
+    .map((item) => ({ label: item.label.trim(), href: item.href.trim() }))
+    .filter((item) => item.label && item.href && item.href !== "#");
+  const used = new Set<number>();
+  const links = FOOTER_MENU_MATCHES.flatMap((match) => {
+    const index = items.findIndex((item, itemIndex) => !used.has(itemIndex) && match(foldLabel(item.label)));
+    if (index < 0) return [];
+    used.add(index);
+    return [items[index]];
+  });
+  return { areas: expertiseAreas(pages), links };
+}
+
 export function builtinMenuTemplate(): CmsPage {
   return {
     slug: MENU_TEMPLATE_SLUG,

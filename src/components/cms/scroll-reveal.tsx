@@ -37,11 +37,10 @@ const REVEAL_RULES: RevealRule[] = [
     variant: "scale",
   },
   {
-    selector: ".site-footer > img:not(.footer-shape), .site-footer > address, .site-footer > .footer-links",
+    selector: ".footer-brand > img, .footer-brand > address, .footer-brand > .footer-links, .footer-directory",
     variant: "up",
     stagger: 120,
   },
-  { selector: ".footer-shape", variant: "fade" },
 ];
 
 /** First block under the header bar; it gets a CSS load intro instead (page-blocks.css). */

@@ -6,17 +6,19 @@ import { articleNewsCards, resolvedMenu } from "@/lib/cms/library";
 import { newsDateForSlug } from "@/lib/cms/news-date";
 import { articleJsonLd, jsonLdHtml } from "@/lib/cms/seo";
 import { getPublishedPage } from "@/lib/cms/storage";
-import type { CmsFooter, CmsLink } from "@/lib/cms/types";
+import type { CmsFooter, CmsLink, CmsPage } from "@/lib/cms/types";
 
 function MissingChrome({
   menu,
   footer,
+  pages,
   title,
   body,
   actions = false,
 }: {
   menu?: CmsLink[];
   footer?: CmsFooter | null;
+  pages?: CmsPage[];
   title: string;
   body: string;
   actions?: boolean;
@@ -37,16 +39,25 @@ function MissingChrome({
           ) : null}
         </div>
       </main>
-      <SiteFooter footer={footer} />
+      <SiteFooter footer={footer} menu={menu} pages={pages} />
     </div>
   );
 }
 
-export function MissingPage({ menu, footer }: { menu?: CmsLink[]; footer?: CmsFooter | null }) {
+export function MissingPage({
+  menu,
+  footer,
+  pages,
+}: {
+  menu?: CmsLink[];
+  footer?: CmsFooter | null;
+  pages?: CmsPage[];
+}) {
   return (
     <MissingChrome
       menu={menu}
       footer={footer}
+      pages={pages}
       title="Sidan finns inte"
       body="Det finns ingen sida på den här sökvägen."
       actions
@@ -69,8 +80,9 @@ export async function CmsRoute({ slug }: { slug: string }) {
 
   const menu = resolvedMenu(stored.state.menu);
   const footer = stored.state.footer;
-  const page = getPublishedPage(slug, stored.state.pages);
-  if (!page) return <MissingPage menu={menu} footer={footer} />;
+  const pages = stored.state.pages;
+  const page = getPublishedPage(slug, pages);
+  if (!page) return <MissingPage menu={menu} footer={footer} pages={pages} />;
 
   const publishedAt = newsDateForSlug(page.slug, stored.state.pages);
   const jsonLd = articleJsonLd(page, publishedAt);
@@ -87,6 +99,7 @@ export async function CmsRoute({ slug }: { slug: string }) {
         page={page}
         menu={menu}
         footer={footer}
+        pages={pages}
         publishedAt={publishedAt}
         articleItems={articleNewsCards(stored.state.pages)}
       />
