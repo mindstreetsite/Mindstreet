@@ -36,7 +36,17 @@ const REVEAL_RULES: RevealRule[] = [
     selector: ".seminar, .cms-image > *, .cms-contact-form-photo, .cms-contact-form .section-inner > form",
     variant: "scale",
   },
+  {
+    selector: ".site-footer > img:not(.footer-shape), .site-footer > address, .site-footer > .footer-links",
+    variant: "up",
+    stagger: 120,
+  },
+  { selector: ".footer-shape", variant: "fade" },
 ];
+
+/** First block under the header bar; it gets a CSS load intro instead (page-blocks.css). */
+const INTRO_BLOCK =
+  ".site-motion > :is(.site-header, .site-header-slot) + :not(footer), .site-motion > .cms-contact-us:first-child";
 
 const MAX_STAGGER_STEPS = 6;
 const ATTRS = ["data-reveal", "data-reveal-state"];
@@ -95,7 +105,7 @@ export function ScrollReveal() {
 
     REVEAL_RULES.forEach(({ selector, variant, stagger = 0 }) => {
       root.querySelectorAll<HTMLElement>(selector).forEach((el) => {
-        if (el.hasAttribute("data-reveal") || el.closest(".hero")) return;
+        if (el.hasAttribute("data-reveal") || el.closest(".hero") || el.closest(INTRO_BLOCK)) return;
         if (el.parentElement?.closest("[data-reveal]")) return;
         // Content already on screen at load stays put instead of flashing out and back in.
         const rect = el.getBoundingClientRect();

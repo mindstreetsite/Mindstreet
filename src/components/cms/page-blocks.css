@@ -1567,6 +1567,74 @@ ol.cms-contact-cards-text {
     animation-delay: 0.45s;
   }
 
+  /* Pages without a hero: the first block under the header bar animates on load.
+     Keep the block selector in sync with INTRO_BLOCK in scroll-reveal.tsx. */
+  :is(
+      .site-motion > :is(.site-header, .site-header-slot) + :not(footer),
+      .site-motion > .cms-contact-us:first-child
+    )
+    :is(
+      .intro > *,
+      .cms-divider-inner,
+      .cms-text-column-section,
+      .cms-contact-cards-intro,
+      .cms-article-intro,
+      .cms-article-copy > *,
+      .cms-statement-inner,
+      .cms-module-copy,
+      .cms-media-photo,
+      .cms-pair-photos > *,
+      .offering-list > article,
+      .news-grid > article,
+      .cms-expertise-grid > article,
+      .cms-contact-card-grid > article,
+      .section-inner > h2,
+      .seminar,
+      .cms-image > *
+    ) {
+    animation: site-intro-up 0.9s var(--motion-ease-out) 0.1s both;
+  }
+
+  :is(
+      .site-motion > :is(.site-header, .site-header-slot) + :not(footer),
+      .site-motion > .cms-contact-us:first-child
+    )
+    :is(
+      .intro > *,
+      .cms-text-column-section,
+      .cms-article-copy > *,
+      .cms-media-photo,
+      .cms-pair-photos > *,
+      .offering-list > article,
+      .news-grid > article,
+      .cms-expertise-grid > article,
+      .cms-contact-card-grid > article
+    ):nth-child(2) {
+    animation-delay: 0.22s;
+  }
+
+  :is(
+      .site-motion > :is(.site-header, .site-header-slot) + :not(footer),
+      .site-motion > .cms-contact-us:first-child
+    )
+    :is(
+      .cms-article-copy > *,
+      .offering-list > article,
+      .news-grid > article,
+      .cms-expertise-grid > article,
+      .cms-contact-card-grid > article
+    ):nth-child(n + 3) {
+    animation-delay: 0.34s;
+  }
+
+  :is(
+      .site-motion > :is(.site-header, .site-header-slot) + :not(footer),
+      .site-motion > .cms-contact-us:first-child
+    )
+    :is(.cms-media-shape, .cms-contact-us-shape) {
+    animation: site-intro-fade 1.6s ease-out 0.2s both;
+  }
+
   .site-motion .btn,
   .site-motion .news-grid img,
   .site-motion .news-grid .news-photo-fallback,
