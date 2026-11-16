@@ -576,7 +576,7 @@ function ModuleCopy({ block }: { block: CmsBlock }) {
   return (
     <div className="cms-module-copy">
       {block.eyebrow ? <p className="cms-eyebrow">{renderBreaks(block.eyebrow)}</p> : null}
-      {block.heading ? <HeadingText text={block.heading} as="h2" /> : null}
+      {block.heading ? <HeadingText text={block.heading} as="h2" hangQuote /> : null}
       <ContactLines block={block} />
       {block.body ? (
         <div className="cms-module-text">

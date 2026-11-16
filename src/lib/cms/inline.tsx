@@ -60,6 +60,14 @@ export function renderBreaks(text: string): ReactNode[] {
   ));
 }
 
+const openingQuote = /^(\s*)(["“”«»‘’‹›])\s?/;
+
+function peelOpeningQuote(text: string): { mark: string; rest: string } | null {
+  const match = openingQuote.exec(text);
+  if (!match?.[2] || match[1].includes("\n")) return null;
+  return { mark: match[2], rest: text.slice(match[0].length) };
+}
+
 function splitParagraphs(body: string): string[] {
   return body
     .split(/\n\s*\n/)
@@ -370,15 +378,27 @@ export function HeadingText({
   text,
   as: Tag = "h2",
   className,
+  hangQuote = false,
 }: {
   text: string;
   as?: "h1" | "h2" | "h3" | "span";
   className?: string;
+  hangQuote?: boolean;
 }) {
-  if (!hasLineFormat(text)) {
-    return <Tag className={className}>{renderBreaks(text)}</Tag>;
+  const peeled = hangQuote ? peelOpeningQuote(text) : null;
+  const body = peeled && !hasLineFormat(peeled.rest) ? peeled.rest : text;
+  const mark =
+    peeled && body !== text ? <span className="cms-hanging-quote">{peeled.mark}</span> : null;
+
+  if (!hasLineFormat(body)) {
+    return (
+      <Tag className={classNames(className, mark && "has-hanging-quote")}>
+        {mark}
+        {renderBreaks(body)}
+      </Tag>
+    );
   }
-  const paragraphs = splitParagraphs(text);
+  const paragraphs = splitParagraphs(body);
   if (paragraphs.length === 0) return <Tag className={className} />;
   return (
     <>

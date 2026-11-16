@@ -515,6 +515,17 @@ ul.cms-list-dash > li::before {
   line-height: 1.2;
 }
 
+.cms-module-copy h2.has-hanging-quote {
+  position: relative;
+}
+
+.cms-hanging-quote {
+  position: absolute;
+  top: 0;
+  right: 100%;
+  white-space: nowrap;
+}
+
 .cms-module-copy h2:has(+ .cms-contact-lines) {
   margin-bottom: 24px;
 }
