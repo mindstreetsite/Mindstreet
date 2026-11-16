@@ -668,8 +668,41 @@ function dedupeArticleNews(pages: CmsPage[]): CmsPage[] {
   return any ? next : pages;
 }
 
+function articleHrefs(pages: CmsPage[]): Set<string> {
+  const hrefs = new Set<string>();
+  for (const page of pages) {
+    if (!isArticlePage(page)) continue;
+    hrefs.add(newsHref(page.slug));
+  }
+  return hrefs;
+}
+
+function newsItemBelongs(item: CmsCard, hrefs: Set<string>): boolean {
+  if (!item.href.trim()) return false;
+  return hrefs.has(newsHref(item.href));
+}
+
+function pruneUnlinkedNews(pages: CmsPage[]): CmsPage[] {
+  const hrefs = articleHrefs(pages);
+  let any = false;
+  const next = pages.map((page) => {
+    const updated = rewritePageNews(page, (block) => {
+      const items = block.items ?? [];
+      const kept = items.filter((item) => newsItemBelongs(item, hrefs));
+      if (kept.length === items.length) return block;
+      return { ...block, items: kept };
+    });
+    if (updated === page) return page;
+    any = true;
+    return updated;
+  });
+  return any ? next : pages;
+}
+
 export function syncAllArticleNews(pages: CmsPage[]): CmsPage[] {
-  return dedupeArticleNews(pages.reduce((next, page) => upsertArticleNewsForPage(next, page), pages));
+  return pruneUnlinkedNews(
+    dedupeArticleNews(pages.reduce((next, page) => upsertArticleNewsForPage(next, page), pages)),
+  );
 }
 
 export function removeArticleNews(pages: CmsPage[], slugs: string[]): CmsPage[] {

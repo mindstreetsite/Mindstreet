@@ -327,25 +327,13 @@ function BlockView({
     );
   }
 
-  if (block.type === "news" || block.type === "newsTwelve") {
-    return (
-      <NewsBlock
-        heading={block.heading}
-        items={block.items ?? []}
-        preview={preview}
-        pageSize={block.type === "newsTwelve" ? 12 : 4}
-        {...themedProps(block, "news")}
-      />
-    );
-  }
-
-  if (block.type === "articleList") {
+  if (block.type === "news" || block.type === "newsTwelve" || block.type === "articleList") {
     return (
       <NewsBlock
         heading={block.heading}
         items={articleItems}
         preview={preview}
-        pageSize={12}
+        pageSize={block.type === "news" ? 4 : 12}
         {...themedProps(block, "news")}
       />
     );

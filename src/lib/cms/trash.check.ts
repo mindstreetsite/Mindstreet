@@ -103,4 +103,45 @@ assert(
   "A later save does not recreate the duplicate",
 );
 
+const withPlaceholder = page("nyheter", [
+  {
+    id: "news",
+    type: "newsTwelve",
+    heading: "Mindblowing news",
+    body: "",
+    items: [
+      {
+        id: "real",
+        heading: "Tips på hur du lyckas med ett systembyte",
+        body: "",
+        href: "/tips",
+        image: "",
+        published: true,
+      },
+      {
+        id: "placeholder",
+        heading: "Behöver du en interimschef från branschen?",
+        body: "",
+        href: "",
+        image: "/images/news-1.jpg",
+        published: true,
+      },
+      {
+        id: "removed",
+        heading: "Borttagen artikel",
+        body: "",
+        href: "/borttagen",
+        image: "",
+        published: true,
+      },
+    ],
+  },
+]);
+const pruned = syncAllArticleNews([withPlaceholder, article]);
+const prunedItems = pruned.find((item) => item.slug === "nyheter")?.blocks[0].items ?? [];
+assert(
+  prunedItems.every((item) => item.href === "/tips"),
+  "Placeholder and removed article cards are dropped",
+);
+
 console.log("trash check ok");
