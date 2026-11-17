@@ -29,8 +29,8 @@ export function SiteFooter({
             rel="noreferrer"
             aria-label={link.label.trim() || "LinkedIn"}
           >
-            <img src="/icons/linkedin.svg" width={47} height={47} alt="" />
-            <img className="linkedin-mark" src="/icons/linkedin-mark.svg" width={22} height={25} alt="" />
+            <img src="/icons/linkedin.svg" width={38} height={38} alt="" />
+            <img className="linkedin-mark" src="/icons/linkedin-mark.svg" width={18} height={20} alt="" />
           </a>
         ))}
       </div>

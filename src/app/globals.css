@@ -1180,15 +1180,27 @@ p {
 .linkedin {
   position: relative;
   display: inline-flex;
-  width: 47px;
-  height: 47px;
+  width: 38px;
+  height: 38px;
   flex-shrink: 0;
+  opacity: 0.9;
 }
 
-.linkedin-mark {
+.linkedin:hover {
+  opacity: 1;
+}
+
+.linkedin img {
+  width: 100%;
+  height: 100%;
+}
+
+.linkedin .linkedin-mark {
   position: absolute;
-  left: 13px;
-  top: 11px;
+  left: 27.6%;
+  top: 23.4%;
+  width: 47%;
+  height: auto;
 }
 
 @media (max-width: 980px) {
@@ -1476,5 +1488,36 @@ p {
   .site-footer address {
     font-size: 18px;
     line-height: 1.55;
+  }
+
+  .footer-directory {
+    gap: 10px;
+  }
+
+  .footer-directory-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    column-gap: 24px;
+  }
+
+  .footer-areas,
+  .footer-directory .footer-menu {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .footer-directory-end {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 16px;
+    margin-left: 0;
+    min-width: 0;
   }
 }
