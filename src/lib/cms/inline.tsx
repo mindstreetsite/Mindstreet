@@ -75,7 +75,7 @@ function splitParagraphs(body: string): string[] {
     .filter(Boolean);
 }
 
-function classNames(...parts: Array<string | undefined | false>) {
+function classNames(...parts: Array<string | undefined | false | null>) {
   return parts.filter(Boolean).join(" ");
 }
 
